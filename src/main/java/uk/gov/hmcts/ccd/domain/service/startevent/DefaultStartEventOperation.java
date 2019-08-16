@@ -21,6 +21,7 @@ import uk.gov.hmcts.ccd.domain.model.draft.DraftResponse;
 import uk.gov.hmcts.ccd.domain.service.callbacks.EventTokenService;
 import uk.gov.hmcts.ccd.domain.service.common.CaseService;
 import uk.gov.hmcts.ccd.domain.service.common.EventTriggerService;
+import uk.gov.hmcts.ccd.domain.service.common.FixedListConverterService;
 import uk.gov.hmcts.ccd.domain.service.common.UIDService;
 import uk.gov.hmcts.ccd.domain.service.getcase.CaseNotFoundException;
 import uk.gov.hmcts.ccd.domain.service.stdapi.CallbackInvoker;
@@ -43,6 +44,7 @@ public class DefaultStartEventOperation implements StartEventOperation {
     private final UserAuthorisation userAuthorisation;
     private final CallbackInvoker callbackInvoker;
     private final UIDService uidService;
+    private final FixedListConverterService fixedListConverterService;
 
     @Autowired
     public DefaultStartEventOperation(final EventTokenService eventTokenService,
@@ -53,7 +55,7 @@ public class DefaultStartEventOperation implements StartEventOperation {
                                       final CaseService caseService,
                                       final UserAuthorisation userAuthorisation,
                                       final CallbackInvoker callbackInvoker,
-                                      final UIDService uidService) {
+                                      final UIDService uidService, final FixedListConverterService fixedListConverterService) {
 
         this.eventTokenService = eventTokenService;
         this.caseDefinitionRepository = caseDefinitionRepository;
@@ -64,6 +66,7 @@ public class DefaultStartEventOperation implements StartEventOperation {
         this.userAuthorisation = userAuthorisation;
         this.callbackInvoker = callbackInvoker;
         this.uidService = uidService;
+        this.fixedListConverterService = fixedListConverterService;
     }
 
     @Override
@@ -76,10 +79,10 @@ public class DefaultStartEventOperation implements StartEventOperation {
         final CaseType caseType = getCaseType(caseTypeId);
 
         return buildStartEventTrigger(uid,
-                                      caseType,
-                                      eventTriggerId,
-                                      ignoreWarning,
-                                      () -> caseService.createNewCaseDetails(caseTypeId, caseType.getJurisdictionId(), Maps.newHashMap()));
+            caseType,
+            eventTriggerId,
+            ignoreWarning,
+            () -> caseService.createNewCaseDetails(caseTypeId, caseType.getJurisdictionId(), Maps.newHashMap()));
     }
 
     @Override
@@ -99,6 +102,8 @@ public class DefaultStartEventOperation implements StartEventOperation {
 
         final String eventToken = eventTokenService.generateToken(uid, caseDetails, eventTrigger, caseType.getJurisdiction(), caseType);
 
+        fixedListConverterService.processListTypeData(caseType.getCaseFields(), caseDetails);
+
         callbackInvoker.invokeAboutToStartCallback(eventTrigger, caseType, caseDetails, ignoreWarning);
 
         return buildStartEventTrigger(eventTriggerId, eventToken, caseDetails);
@@ -116,10 +121,10 @@ public class DefaultStartEventOperation implements StartEventOperation {
         final CaseType caseType = getCaseType(caseDetails.getCaseTypeId());
 
         return buildStartEventTrigger(uid,
-                                      caseType,
-                                      draftResponse.getDocument().getEventTriggerId(),
-                                      ignoreWarning,
-                                      () -> caseDetails);
+            caseType,
+            draftResponse.getDocument().getEventTriggerId(),
+            ignoreWarning,
+            () -> caseDetails);
     }
 
     private StartEventTrigger buildStartEventTrigger(final String uid,
@@ -135,6 +140,8 @@ public class DefaultStartEventOperation implements StartEventOperation {
 
         // TODO: we may need to take care of drafts that are saved for existing case so token needs to include the relevant draft payload
         final String eventToken = eventTokenService.generateToken(uid, eventTrigger, caseType.getJurisdiction(), caseType);
+
+        fixedListConverterService.processListTypeData(caseType.getCaseFields(), caseDetails);
 
         callbackInvoker.invokeAboutToStartCallback(eventTrigger, caseType, caseDetails, ignoreWarning);
 
@@ -179,5 +186,4 @@ public class DefaultStartEventOperation implements StartEventOperation {
             throw new ValidationException("The case status did not qualify for the event");
         }
     }
-
 }

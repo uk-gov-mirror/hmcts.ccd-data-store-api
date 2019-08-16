@@ -34,6 +34,7 @@ import uk.gov.hmcts.ccd.domain.model.definition.CaseTypeTab;
 import uk.gov.hmcts.ccd.domain.model.definition.CaseTypeTabField;
 import uk.gov.hmcts.ccd.domain.model.definition.ComplexACL;
 import uk.gov.hmcts.ccd.domain.model.definition.FieldType;
+import uk.gov.hmcts.ccd.domain.model.definition.FixedListItem;
 import uk.gov.hmcts.ccd.domain.model.definition.Jurisdiction;
 import uk.gov.hmcts.ccd.domain.model.definition.UserRole;
 import uk.gov.hmcts.ccd.domain.model.definition.WizardPage;
@@ -1051,10 +1052,12 @@ public class TestBuildersUtil {
     public static class FieldTypeBuilder {
         private final FieldType fieldType;
         private final List<CaseField> complexFields;
+        List<FixedListItem> fixedListItems;
 
         private FieldTypeBuilder() {
             this.fieldType = new FieldType();
             this.complexFields = Lists.newArrayList();
+            this.fixedListItems = Lists.newArrayList();
         }
 
         public static FieldTypeBuilder aFieldType() {
@@ -1076,6 +1079,11 @@ public class TestBuildersUtil {
             return this;
         }
 
+        public FieldTypeBuilder withFixedListItem(FixedListItem fixedListItem) {
+            fixedListItems.add(fixedListItem);
+            return this;
+        }
+
         public FieldTypeBuilder withCollectionFieldType(FieldType collectionFieldType) {
             fieldType.setCollectionFieldType(collectionFieldType);
             return this;
@@ -1091,6 +1099,7 @@ public class TestBuildersUtil {
 
         public FieldType build() {
             fieldType.setComplexFields(complexFields);
+            fieldType.setFixedListItems(fixedListItems);
             return fieldType;
         }
     }
@@ -1127,6 +1136,37 @@ public class TestBuildersUtil {
             this.caseViewField.setAccessControlLists(acls);
             this.caseViewField.setFieldType(this.caseFieldType);
             return this.caseViewField;
+        }
+    }
+
+    public static class FixedListItemBuilder {
+        private final FixedListItem fixedListItem;
+
+        private FixedListItemBuilder() {
+            this.fixedListItem = new FixedListItem();
+        }
+
+        public static FixedListItemBuilder newFixedListItem() {
+            return new FixedListItemBuilder();
+        }
+
+        public FixedListItemBuilder withCode(String code) {
+            fixedListItem.setCode(code);
+            return this;
+        }
+
+        public FixedListItemBuilder withLabel(String label) {
+            fixedListItem.setLabel(label);
+            return this;
+        }
+
+        public FixedListItemBuilder withOrder(String order) {
+            fixedListItem.setOrder(order);
+            return this;
+        }
+
+        public FixedListItem build() {
+            return this.fixedListItem;
         }
     }
 

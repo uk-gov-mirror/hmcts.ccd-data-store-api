@@ -17,6 +17,7 @@ import uk.gov.hmcts.ccd.domain.model.definition.CaseType;
 import uk.gov.hmcts.ccd.domain.model.std.AuditEvent;
 import uk.gov.hmcts.ccd.domain.service.common.CaseTypeService;
 import uk.gov.hmcts.ccd.domain.service.common.EventTriggerService;
+import uk.gov.hmcts.ccd.domain.service.common.FixedListConverterService;
 import uk.gov.hmcts.ccd.domain.service.common.ObjectMapperService;
 import uk.gov.hmcts.ccd.domain.service.common.UIDService;
 import uk.gov.hmcts.ccd.domain.service.getcase.CreatorGetCaseOperation;
@@ -36,6 +37,7 @@ public class DefaultGetCaseViewOperation extends AbstractDefaultGetCaseViewOpera
     private final GetEventsOperation getEventsOperation;
     private final CaseTypeService caseTypeService;
     private final EventTriggerService eventTriggerService;
+    private final FixedListConverterService fixedListConverterService;
 
     @Autowired
     public DefaultGetCaseViewOperation(@Qualifier(CreatorGetCaseOperation.QUALIFIER) GetCaseOperation getCaseOperation,
@@ -44,11 +46,12 @@ public class DefaultGetCaseViewOperation extends AbstractDefaultGetCaseViewOpera
                                        CaseTypeService caseTypeService,
                                        EventTriggerService eventTriggerService,
                                        UIDService uidService,
-                                       ObjectMapperService objectMapperService) {
+                                       ObjectMapperService objectMapperService, FixedListConverterService fixedListConverterService) {
         super(getCaseOperation, uiDefinitionRepository, caseTypeService, uidService, objectMapperService);
         this.getEventsOperation = getEventsOperation;
         this.caseTypeService = caseTypeService;
         this.eventTriggerService = eventTriggerService;
+        this.fixedListConverterService = fixedListConverterService;
     }
 
     @Override
@@ -58,6 +61,7 @@ public class DefaultGetCaseViewOperation extends AbstractDefaultGetCaseViewOpera
         final CaseDetails caseDetails = getCaseDetails(caseReference);
 
         final CaseType caseType = getCaseType(caseDetails.getJurisdiction(), caseDetails.getCaseTypeId());
+        fixedListConverterService.processListTypeData(caseType.getCaseFields(), caseDetails);
         final List<AuditEvent> events = getEventsOperation.getEvents(caseDetails);
         final CaseTabCollection caseTabCollection = getCaseTabCollection(caseDetails.getCaseTypeId());
 

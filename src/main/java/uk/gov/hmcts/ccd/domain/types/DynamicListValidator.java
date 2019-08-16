@@ -41,8 +41,8 @@ public class DynamicListValidator implements BaseTypeValidator {
     }
 
     private void validateLength(List<ValidationResult> results, JsonNode node, String dataFieldId) {
-        final String code = node.get(CODE).textValue();
-        final String value = node.get(LABEL).textValue();
+        final String code = node.get(CODE) != null ? node.get(CODE).textValue() : null;
+        final String value = node.get(LABEL) != null? node.get(LABEL).textValue() : null;
         if (StringUtils.isNotEmpty(code) && code.length() > 150) {
             results.add(new ValidationResult("Code length exceeds MAX limit", dataFieldId));
         }

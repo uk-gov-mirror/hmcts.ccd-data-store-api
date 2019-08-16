@@ -45,6 +45,7 @@ import uk.gov.hmcts.ccd.domain.model.std.CaseDataContent;
 import uk.gov.hmcts.ccd.domain.service.callbacks.EventTokenService;
 import uk.gov.hmcts.ccd.domain.service.common.CaseService;
 import uk.gov.hmcts.ccd.domain.service.common.EventTriggerService;
+import uk.gov.hmcts.ccd.domain.service.common.FixedListConverterService;
 import uk.gov.hmcts.ccd.domain.service.common.UIDService;
 import uk.gov.hmcts.ccd.domain.service.getcase.CaseNotFoundException;
 import uk.gov.hmcts.ccd.domain.service.stdapi.CallbackInvoker;
@@ -95,6 +96,9 @@ public class DefaultStartEventOperationTest {
     @Mock
     private UIDService uidService;
 
+    @Mock
+    private FixedListConverterService fixedListConverterService;
+
     private DefaultStartEventOperation defaultStartEventOperation;
 
     private final CaseDetails caseDetails = newCaseDetails().build();
@@ -130,7 +134,7 @@ public class DefaultStartEventOperationTest {
                                                                     caseService,
                                                                     userAuthorisation,
                                                                     callbackInvoker,
-                                                                    uidService);
+                                                                    uidService, fixedListConverterService);
     }
 
     @Nested
