@@ -2,6 +2,7 @@ package uk.gov.hmcts.ccd.integrations;
 
 import com.google.common.collect.Lists;
 import org.junit.Ignore;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.BeforeEach;
 
@@ -9,6 +10,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.jdbc.Sql;
@@ -16,8 +18,11 @@ import org.springframework.transaction.annotation.Transactional;
 import uk.gov.hmcts.ccd.data.caseaccess.*;
 import uk.gov.hmcts.ccd.data.casedetails.CaseDetailsRepository;
 import uk.gov.hmcts.ccd.ApplicationParams;
+import uk.gov.hmcts.ccd.data.helper.AccessManagementQueryHelper;
 import uk.gov.hmcts.ccd.domain.model.definition.CaseDetails;
 import uk.gov.hmcts.ccd.domain.service.getcase.CaseNotFoundException;
+import uk.gov.hmcts.reform.amlib.DefaultRoleSetupImportService;
+import uk.gov.hmcts.reform.amlib.models.ResourceDefinition;
 
 import javax.inject.Inject;
 import javax.persistence.EntityManager;
@@ -32,6 +37,9 @@ import static org.hamcrest.Matchers.equalTo;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.*;
+import static uk.gov.hmcts.reform.amlib.enums.AccessType.ROLE_BASED;
+import static uk.gov.hmcts.reform.amlib.enums.RoleType.IDAM;
+import static uk.gov.hmcts.reform.amlib.enums.SecurityClassification.PUBLIC;
 
 @Ignore
 @Transactional
@@ -44,6 +52,12 @@ public class SwitchableCaseUserRepositoryIT extends IntegrationTest {
 
     @Inject
     protected DataSource db;
+
+    @Autowired
+    DefaultRoleSetupImportService defaultRoleSetupImportService;
+
+    @Autowired
+    AccessManagementQueryHelper accessManagementQueryHelper;
 
     @Mock
     protected CaseDetailsRepository caseDetailsRepository;
@@ -119,6 +133,21 @@ public class SwitchableCaseUserRepositoryIT extends IntegrationTest {
 
         // configure the AM Switch values to predefine the Case Type ID's to set Read & write access from CCD & AM
         preDefineAMSwitchValues();
+
+        defaultRoleSetupImportService.addService(JURISDICTION);
+        defaultRoleSetupImportService.addRole(CASE_ROLE_GRANTED, IDAM, PUBLIC, ROLE_BASED);
+        defaultRoleSetupImportService.addRole(CASE_ROLE_SOLICITOR, IDAM, PUBLIC, ROLE_BASED);
+
+        ResourceDefinition resourceDefinition =
+            //TODO: What should be the resourceType and resourceName.
+            //To be clarified with Mutlu/Shashank again.//resource name: CMC, FPL
+            new ResourceDefinition(JURISDICTION, "case", AM_CASE_REFERENCE.toString());
+        defaultRoleSetupImportService.addResourceDefinition(resourceDefinition);
+    }
+
+    @AfterEach
+    public void tearDown() {
+        accessManagementQueryHelper.deleteAllFromAccessManagementTables();
     }
 
     @Test
@@ -184,7 +213,7 @@ public class SwitchableCaseUserRepositoryIT extends IntegrationTest {
         assertThat(switchableCaseUserRepository.findCasesUserIdHasAccessTo(USER_ID).size(), equalTo(0));
     }
 
-    //@Test
+    @Test
     @Sql(executionPhase = Sql.ExecutionPhase.BEFORE_TEST_METHOD, scripts = {"classpath:sql/insert_cases_am_switch_test.sql"})
     @DisplayName("To Test writing the data into AM and validate the Read from AM & CCD")
     public void amOnlyWriteAndValidateReadFromAMAndCCD() {
@@ -252,7 +281,7 @@ public class SwitchableCaseUserRepositoryIT extends IntegrationTest {
 
     }
 
-    //@Test
+    @Test
     @Sql(executionPhase = Sql.ExecutionPhase.BEFORE_TEST_METHOD, scripts = {"classpath:sql/insert_cases_am_switch_test.sql"})
     @DisplayName("To read multiple case data for single user and validate the Read from AM & CCD")
     public void readMultipleCaseDataForSingleUser() {
