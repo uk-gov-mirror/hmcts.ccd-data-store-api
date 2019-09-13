@@ -1,23 +1,33 @@
 package uk.gov.hmcts.ccd.integrations;
 
 import com.google.common.collect.Lists;
+import org.junit.Before;
 import org.junit.Ignore;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.BeforeEach;
 
 import org.junit.jupiter.api.DisplayName;
+import org.junit.runner.RunWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.jdbc.Sql;
+import org.springframework.test.context.junit4.SpringRunner;
 import org.springframework.transaction.annotation.Transactional;
 import uk.gov.hmcts.ccd.data.caseaccess.*;
 import uk.gov.hmcts.ccd.data.casedetails.CaseDetailsRepository;
 import uk.gov.hmcts.ccd.ApplicationParams;
+import uk.gov.hmcts.ccd.data.helper.AccessManagementQueryHelper;
 import uk.gov.hmcts.ccd.domain.model.definition.CaseDetails;
 import uk.gov.hmcts.ccd.domain.service.getcase.CaseNotFoundException;
+import uk.gov.hmcts.reform.amlib.DefaultRoleSetupImportService;
+import uk.gov.hmcts.reform.amlib.models.ResourceDefinition;
 
 import javax.inject.Inject;
 import javax.persistence.EntityManager;
@@ -32,6 +42,9 @@ import static org.hamcrest.Matchers.equalTo;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.*;
+import static uk.gov.hmcts.reform.amlib.enums.AccessType.ROLE_BASED;
+import static uk.gov.hmcts.reform.amlib.enums.RoleType.IDAM;
+import static uk.gov.hmcts.reform.amlib.enums.SecurityClassification.PUBLIC;
 
 @Ignore
 @Transactional
@@ -66,6 +79,13 @@ public class SwitchableCaseUserRepositoryIT extends IntegrationTest {
     @Inject
     private SwitchableCaseUserRepository switchableCaseUserRepository;
 
+    @Autowired
+    DefaultRoleSetupImportService defaultRoleSetupImportService;
+
+    @Autowired
+    @Qualifier("amDataSource")
+    private DataSource dataSource;
+
     private static final String JURISDICTION = "CMC";
     private static final String WRONG_JURISDICTION = "DIVORCE";
     private static final String CCD_CASE_TYPE_ID = "DIVORCE";
@@ -98,6 +118,17 @@ public class SwitchableCaseUserRepositoryIT extends IntegrationTest {
     private static final String TEST_CT = "TEST";
     private static final String CR_CT = "CR";
 
+    private static final String JURISDICTION_ID = "JURISDICTION";
+    private static final String CASE_TYPE_ID = "CASE_TYPE";
+    private static final String CASE_REFERENCE = "1234123412341234";
+    private static final Long CASE_ID = 1L;
+    private static final Long CASE_ID_GRANTED = 2L;
+    private static final Long CASE_ID_3 = 3L;
+
+    private static final String USER_ID_GRANTED = "89001";
+    private static final String CASE_ROLE = "[DEFENDANT]";
+    private static final String CASE_ROLE_CREATOR = "[CREATOR]";
+
     private List<String> ccdOnlyWriteCaseTypes = Lists.newArrayList(DIVORCE_CT, CMC_CT);
     private List<String> amOnlyWriteCaseTypes = Lists.newArrayList(PROBATE_CT, CR_CT);
     private List<String> bothWriteCaseTypes = Lists.newArrayList(FR_CT, TEST_CT);
@@ -109,7 +140,7 @@ public class SwitchableCaseUserRepositoryIT extends IntegrationTest {
     private List<String> caseRoles;
 
     @BeforeEach
-    void setUp() {
+    void setUpABC() {
         MockitoAnnotations.initMocks(this);
 
         template = new JdbcTemplate(db);
@@ -119,6 +150,23 @@ public class SwitchableCaseUserRepositoryIT extends IntegrationTest {
 
         // configure the AM Switch values to predefine the Case Type ID's to set Read & write access from CCD & AM
         preDefineAMSwitchValues();
+    }
+
+    @Before
+    public void setUp() {
+
+        defaultRoleSetupImportService = new DefaultRoleSetupImportService(dataSource);
+
+        defaultRoleSetupImportService.addService(JURISDICTION);
+        defaultRoleSetupImportService.addRole(CASE_ROLE, IDAM, PUBLIC, ROLE_BASED);
+        defaultRoleSetupImportService.addRole(CASE_ROLE_SOLICITOR, IDAM, PUBLIC, ROLE_BASED);
+        defaultRoleSetupImportService.addRole(CASE_ROLE_CREATOR, IDAM, PUBLIC, ROLE_BASED);
+
+        ResourceDefinition resourceDefinition =
+            //TODO: What should be the resourceType and resourceName.
+            //To be clarified with Mutlu/Shashank again.//resource name: CMC, FPL
+            new ResourceDefinition(JURISDICTION, "case", CASE_REFERENCE);
+        defaultRoleSetupImportService.addResourceDefinition(resourceDefinition);
     }
 
     @Test
