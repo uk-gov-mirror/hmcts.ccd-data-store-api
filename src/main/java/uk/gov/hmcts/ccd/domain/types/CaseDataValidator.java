@@ -138,7 +138,8 @@ public class CaseDataValidator {
     }
 
     private boolean shouldTreatAsValueNode(FieldType fieldType, JsonNode itemValue) {
-        return itemValue.isValueNode() || fieldType.getType().equalsIgnoreCase(DocumentValidator.TYPE_ID);
+        return itemValue.isValueNode() || fieldType.getType().equalsIgnoreCase(DocumentValidator.TYPE_ID)
+            || fieldType.getType().equalsIgnoreCase(DynamicListValidator.TYPE_ID);
     }
 }
 
