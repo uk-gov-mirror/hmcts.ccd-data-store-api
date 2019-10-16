@@ -238,6 +238,82 @@ public class CaseDataValidatorTest extends WireMockBaseTest {
     }
 
     @Test
+    public void validCollectionOfSimpleDynamicListField() throws Exception {
+
+        final String DATA =
+            "{\n" +
+            "  \"Collection\" : [ { \"value\" :\n" +
+            "                           { \"value\":\n" +
+            "                             {\n" +
+            "                                  \"code\": \"List3\",\n" +
+            "                                  \"label\": \" List 3\"\n" +
+            "                             },\n" +
+            "                             \"list_items\": [" +
+            "                                  {\n" +
+            "                                  \"code\": \"List1\",\n" +
+            "                                  \"label\": \" List 1\"\n" +
+            "                                  }, {\n" +
+            "                                  \"code\": \"List2\",\n" +
+            "                                  \"label\": \" List 2\"\n" +
+            "                                  }, {\n" +
+            "                                  \"code\": \"List3\",\n" +
+            "                                  \"label\": \" List 3\"\n" +
+            "                                  }, {\n" +
+            "                                  \"code\": \"List4\",\n" +
+            "                                  \"label\": \" List 4\"\n" +
+            "                                  }, {\n" +
+            "                                  \"code\": \"List5\",\n" +
+            "                                  \"label\": \" List 5\"\n" +
+            "                                  }, {\n" +
+            "                                  \"code\": \"List6\",\n" +
+            "                                  \"label\": \" List 6\"\n" +
+            "                                  }, {\n" +
+            "                                  \"code\": \"List7\",\n" +
+            "                                  \"label\": \" List 7\"\n" +
+            "                                  }\n" +
+            "                             ]\n" +
+            "                           }\n" +
+            "                     }," +
+            "                     { \"value\":\n" +
+            "                           { \"value\":\n" +
+            "                              {\n" +
+            "                                 \"code\": \"List5\",\n" +
+            "                                 \"label\": \" List 5\"\n" +
+            "                              },\n" +
+            "                              \"list_items\": [{\n" +
+            "                                 \"code\": \"List1\",\n" +
+            "                                 \"label\": \" List 1\"\n" +
+            "                                 }, {\n" +
+            "                                 \"code\": \"List2\",\n" +
+            "                                 \"label\": \" List 2\"\n" +
+            "                                 }, {\n" +
+            "                                 \"code\": \"List3\",\n" +
+            "                                 \"label\": \" List 3\"\n" +
+            "                                 }, {\n" +
+            "                                 \"code\": \"List4\",\n" +
+            "                                 \"label\": \" List 4\"\n" +
+            "                                 }, {\n" +
+            "                                 \"code\": \"List5\",\n" +
+            "                                 \"label\": \" List 5\"\n" +
+            "                                 }, {\n" +
+            "                                 \"code\": \"List6\",\n" +
+            "                                 \"label\": \" List 6\"\n" +
+            "                                 }, {\n" +
+            "                                 \"code\": \"List7\",\n" +
+            "                                 \"label\": \" List 7\"\n" +
+            "                                 }\n" +
+            "                             ]\n" +
+            "                          }\n" +
+        "                       }\n" +
+        "                   ]\n" +
+            "}";
+
+        final Map<String, JsonNode> values = MAPPER.readValue(DATA, STRING_NODE_TYPE);
+        final List<ValidationResult> results = caseDataValidator.validate(values, caseFields);
+        assertEquals(results.toString(), 0, results.size());
+    }
+
+    @Test
     public void validCollectionOfSimpleFields() throws Exception {
 
         final String DATA =

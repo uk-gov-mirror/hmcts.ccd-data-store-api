@@ -65,6 +65,9 @@ class TestConfiguration extends ContextCleanupListener {
             "    \"type\": \"FixedList\"\n" +
             "  },\n" +
             "  {\n" +
+            "    \"type\": \"FixedRadioList\"\n" +
+            "  },\n" +
+            "  {\n" +
             "    \"type\": \"PostCode\",\n" +
             "    \"regular_expression\": \"^([A-PR-UWYZ0-9][A-HK-Y0-9][AEHMNPRTVXY0-9]?[ABEHMNPRVWXY0-9]? {1,2}[0-9][ABD-HJLN-UW-Z]{2}|GIR 0AA)$\"\n" +
             "  },\n" +
@@ -89,6 +92,21 @@ class TestConfiguration extends ContextCleanupListener {
             "  }," +
             "  {\n" +
             "    \"type\": \"Document\"\n" +
+            "  },\n" +
+            "  {\n" +
+            "    \"type\": \"DynamicList\"\n" +
+            "  },\n" +
+            "  {\n" +
+            "     \"type\": \"DocumentAssembler\"\n" +
+            "  },\n" +
+            "  {\n" +
+            "     \"type\": \"CaseHistoryViewer\"\n" +
+            "  },\n" +
+            "  {\n" +
+            "     \"type\": \"CasePaymentHistoryViewer\"\n" +
+            "  },\n" +
+            "  {\n" +
+            "     \"type\": \"Label\"\n" +
             "  }\n" +
             "]";
 

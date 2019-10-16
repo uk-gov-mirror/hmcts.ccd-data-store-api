@@ -13,6 +13,18 @@
     }
   },
   {
+    "id": "Collection",
+    "case_type_id": "TestAddressBookCase",
+    "field_type": {
+      "type": "Collection",
+      "id": "DynamicList",
+      "collection_field_type": {
+        "id": "DynamicList",
+        "type": "DynamicList"
+      }
+    }
+  },
+  {
     "id": "OtherAddresses",
     "case_type_id": "TestAddressBookCase",
     "field_type": {
