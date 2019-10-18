@@ -93,14 +93,14 @@ public class MidEventCallback {
 
                     return dataJsonNode(caseDetailsFromMidEventCallback.getData());
                 } else {
-                    // retrieve DynamicList details if no dynamic list data from callback and no dynamic list data in the incoming request
-                    Map<String, JsonNode> data = caseService.getCaseDetails(caseType.getJurisdictionId(), content.getCaseReference()).getData();
-                    List<CaseField> dynamicListFields = caseType.getDynamicListFields();
-
-                    dynamicListFields.stream()
-                        .filter(caseField -> data.containsKey(caseField.getId()) && !content.getData().containsKey(caseField.getId()))
-                        .forEach(caseField -> content.getData().put(caseField.getId(), data.get(caseField.getId())));
-
+                    // retrieve DynamicList details if no dynamic list data from callback and no dynamic list data in the incoming request based on existing case details
+                    if (content.getCaseReference() != null) {
+                        List<CaseField> dynamicListFields = caseType.getDynamicListFields();
+                        Map<String, JsonNode> data = caseService.getCaseDetails(caseType.getJurisdictionId(), content.getCaseReference()).getData();
+                        dynamicListFields.stream()
+                            .filter(caseField -> data.containsKey(caseField.getId()) && !content.getData().containsKey(caseField.getId()))
+                            .forEach(caseField -> content.getData().put(caseField.getId(), data.get(caseField.getId())));
+                    }
                 }
             }
         }
