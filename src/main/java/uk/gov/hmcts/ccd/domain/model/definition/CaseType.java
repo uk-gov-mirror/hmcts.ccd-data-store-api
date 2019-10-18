@@ -9,6 +9,11 @@ import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
+
+import static uk.gov.hmcts.ccd.domain.model.definition.FieldType.COLLECTION;
+import static uk.gov.hmcts.ccd.domain.model.definition.FieldType.COMPLEX;
+import static uk.gov.hmcts.ccd.domain.model.definition.FieldType.DYNAMIC_LIST;
 
 @ToString
 public class CaseType implements Serializable {
@@ -158,6 +163,13 @@ public class CaseType implements Serializable {
         }
     }
 
+    @JsonIgnore
+    public List<CaseField> getDynamicListFields() {
+        return caseFields.stream().filter(caseField -> caseField.getFieldType().getType().equals(COLLECTION)
+            || caseField.getFieldType().getType().equals(COMPLEX) ||
+            caseField.getFieldType().getType().equals(DYNAMIC_LIST)).collect(Collectors.toList());
+
+    }
     @JsonIgnore
     public boolean isCaseFieldACollection(String caseFieldId) {
         return getCaseField(caseFieldId).map(CaseField::isCollectionFieldType).orElse(false);

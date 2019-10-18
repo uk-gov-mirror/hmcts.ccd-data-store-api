@@ -1,9 +1,14 @@
 package uk.gov.hmcts.ccd.domain.service.createevent;
 
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 import static org.apache.commons.lang3.StringUtils.isBlank;
+import static uk.gov.hmcts.ccd.domain.model.definition.FieldType.COLLECTION;
+import static uk.gov.hmcts.ccd.domain.model.definition.FieldType.COMPLEX;
+import static uk.gov.hmcts.ccd.domain.model.definition.FieldType.DYNAMIC_LIST;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -17,6 +22,7 @@ import uk.gov.hmcts.ccd.data.definition.CaseDefinitionRepository;
 import uk.gov.hmcts.ccd.data.definition.UIDefinitionRepository;
 import uk.gov.hmcts.ccd.domain.model.definition.CaseDetails;
 import uk.gov.hmcts.ccd.domain.model.definition.CaseEvent;
+import uk.gov.hmcts.ccd.domain.model.definition.CaseField;
 import uk.gov.hmcts.ccd.domain.model.definition.CaseType;
 import uk.gov.hmcts.ccd.domain.model.definition.WizardPage;
 import uk.gov.hmcts.ccd.domain.model.std.CaseDataContent;
@@ -62,29 +68,40 @@ public class MidEventCallback {
                 .filter(wizardPage -> wizardPage.getId().equals(pageId))
                 .findFirst();
 
-            if (wizardPageOptional.isPresent() && !isBlank(wizardPageOptional.get().getCallBackURLMidEvent())) {
+            if (wizardPageOptional.isPresent()) {
+                if (!isBlank(wizardPageOptional.get().getCallBackURLMidEvent())) {
 
-                CaseDetails caseDetailsBefore = null;
-                CaseDetails currentOrNewCaseDetails;
-                if (StringUtils.isNotEmpty(content.getCaseReference())) {
-                    CaseDetails caseDetails = caseService.getCaseDetails(caseType.getJurisdictionId(), content.getCaseReference());
-                    caseDetailsBefore = caseService.clone(caseDetails);
-                    currentOrNewCaseDetails = caseService.populateCurrentCaseDetailsWithEventFields(content,
-                        caseDetails);
+                    CaseDetails caseDetailsBefore = null;
+                    CaseDetails currentOrNewCaseDetails;
+                    if (StringUtils.isNotEmpty(content.getCaseReference())) {
+                        CaseDetails caseDetails = caseService.getCaseDetails(caseType.getJurisdictionId(), content.getCaseReference());
+                        caseDetailsBefore = caseService.clone(caseDetails);
+                        currentOrNewCaseDetails = caseService.populateCurrentCaseDetailsWithEventFields(content,
+                                                                                                        caseDetails);
 
+                    } else {
+                        currentOrNewCaseDetails = caseService.createNewCaseDetails(caseTypeId, caseType.getJurisdictionId(),
+                                                                                   content.getEventData() == null ? content.getData() : content.getEventData());
+                    }
+
+                    CaseDetails caseDetailsFromMidEventCallback = callbackInvoker.invokeMidEventCallback(wizardPageOptional.get(),
+                                                                                                         caseType,
+                                                                                                         caseEvent,
+                                                                                                         caseDetailsBefore,
+                                                                                                         currentOrNewCaseDetails,
+                                                                                                         content.getIgnoreWarning());
+
+                    return dataJsonNode(caseDetailsFromMidEventCallback.getData());
                 } else {
-                    currentOrNewCaseDetails = caseService.createNewCaseDetails(caseTypeId, caseType.getJurisdictionId(),
-                        content.getEventData() == null ? content.getData() : content.getEventData());
+                    // retrieve DynamicList details if no dynamic list data from callback and no dynamic list data in the incoming request
+                    Map<String, JsonNode> data = caseService.getCaseDetails(caseType.getJurisdictionId(), content.getCaseReference()).getData();
+                    List<CaseField> dynamicListFields = caseType.getDynamicListFields();
+
+                    dynamicListFields.stream()
+                        .filter(caseField -> data.containsKey(caseField.getId()) && !content.getData().containsKey(caseField.getId()))
+                        .forEach(caseField -> content.getData().put(caseField.getId(), data.get(caseField.getId())));
+
                 }
-
-                CaseDetails caseDetailsFromMidEventCallback = callbackInvoker.invokeMidEventCallback(wizardPageOptional.get(),
-                    caseType,
-                    caseEvent,
-                    caseDetailsBefore,
-                    currentOrNewCaseDetails,
-                    content.getIgnoreWarning());
-
-                return dataJsonNode(caseDetailsFromMidEventCallback.getData());
             }
         }
         return dataJsonNode(content.getData());
