@@ -98,7 +98,7 @@ public class MidEventCallback {
                         List<CaseField> dynamicListFields = caseType.getDynamicListFields();
                         Map<String, JsonNode> data = caseService.getCaseDetails(caseType.getJurisdictionId(), content.getCaseReference()).getData();
                         dynamicListFields.stream()
-                            .filter(caseField -> data.containsKey(caseField.getId()) && !content.getData().containsKey(caseField.getId()))
+                            .filter(caseField -> data.containsKey(caseField.getId()) && !content.getEventData().containsKey(caseField.getId()))
                             .forEach(caseField -> content.getData().put(caseField.getId(), data.get(caseField.getId())));
                     }
                 }
