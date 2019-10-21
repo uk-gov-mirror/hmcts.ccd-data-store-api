@@ -1,7 +1,6 @@
 package uk.gov.hmcts.ccd.domain.types;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.node.ArrayNode;
 import org.apache.commons.lang3.StringUtils;
 import uk.gov.hmcts.ccd.domain.model.definition.CaseField;
 
@@ -10,8 +9,6 @@ import javax.inject.Singleton;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-
-import static com.google.common.collect.Lists.newArrayList;
 
 @Named
 @Singleton
@@ -39,19 +36,8 @@ public class DynamicListValidator implements BaseTypeValidator {
         if (value != null) {
             validateLength(results, value, dataFieldId);
         }
-        validateValueInListItems(results, value, (ArrayNode) dataValue.get(LIST_ITEMS), dataFieldId);
 
         return results;
-    }
-
-    private void validateValueInListItems(List<ValidationResult> results, final JsonNode value, final ArrayNode listItems, String dataFieldId) {
-        if (newArrayList(listItems).stream().noneMatch(item -> isEqual(value, item))) {
-                results.add(new ValidationResult("Value not in list items", dataFieldId));
-        }
-    }
-
-    private boolean isEqual(final JsonNode value, final JsonNode jsonNode) {
-        return jsonNode.get(CODE).asText().trim().equals(value.get(CODE).asText().trim()) && jsonNode.get(LABEL).asText().trim().equals(value.get(LABEL).asText().trim());
     }
 
     private void validateLength(List<ValidationResult> results, JsonNode node, String dataFieldId) {
