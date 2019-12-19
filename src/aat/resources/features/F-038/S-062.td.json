@@ -1,0 +1,27 @@
+{
+  "_guid_": "S-062",
+  "_extends_": "F-038_Test_Data_Base",
+  "title": "should retrieve empty result when a case exists if caseworker has 'D' access on CaseType",
+  "specs": [
+    "an active profile in CCD",
+    "includes caseworker has 'D' access on CaseType",
+    "code is HTTP-403"
+  ],
+  "users": {
+    "invokingUser": {
+      "username": "befta.restricted.caseworker.3@gmail.com",
+      "password": "Pa55word11"
+    }
+  },
+  "request": {
+    "pathVariables": {
+      "ctid": "BEFTA_CASETYPE_3_D"
+    }
+  },
+  "expectedResponse": {
+    "_extends_": "Common_403_Response",
+    "body": {
+      "message" : "Access Denied"
+    }
+  }
+}

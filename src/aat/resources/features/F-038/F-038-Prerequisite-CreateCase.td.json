@@ -1,0 +1,30 @@
+{
+  "_guid_": "F-038-Prerequisite-CreateCase",
+  "_extends_": "Standard_Full_Case_Data_With_Document",
+    "users": {
+    "invokingUser": {
+      "username": "befta.caseworker.3@gmail.com",
+      "password": "Pa55word11"
+    }
+  },
+  "request": {
+    "_extends_": "Common_Request",
+    "pathVariables": {
+      "uid": "[[DYNAMIC]]",
+      "jid": "BEFTA_JURISDICTION_3",
+      "ctid": "BEFTA_CASETYPE_3_1"
+    },
+    "body": {
+      "event_token": "${[scenarioContext][childContexts][F-038-Prerequisite][testData][actualResponse][body][token]}",
+      "ignore_warning": false
+    }
+  },
+  "expectedResponse": {
+    "headers": {
+      "Content-Length" : "[[ANY]]",
+      "Content-Encoding": "gzip",
+      "Content-Type": "application/json;charset=UTF-8",
+      "Transfer-Encoding" : "chunked"
+    }
+  }
+}

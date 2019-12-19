@@ -473,7 +473,7 @@ jsonSchema2Pojo {
 }
 
 jacoco {
-    toolVersion = "0.8.0"
+    toolVersion = "0.8.4"
 }
 
 sonarqube {
@@ -638,7 +638,7 @@ task functional(type: Test) {
     setClasspath(sourceSets.aat.runtimeClasspath)
     include "uk/gov/hmcts/ccd/datastore/tests/functional/**"
     include "uk/gov/hmcts/ccd/datastore/tests/v2/**"
-    useJUnitPlatform()
+//    useJUnitPlatform()
 
     doFirst {
         generateCucumberReports.enabled = true

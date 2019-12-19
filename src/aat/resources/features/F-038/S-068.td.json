@@ -1,0 +1,16 @@
+{
+  "_guid_": "S-068",
+  "_extends_": "F-038_Test_Data_Base",
+  "title": "must get case data for a given case type for Case Worker successfully and return positive response HTTP-200 for correct inputs",
+  "specs": [
+    "an active profile in CCD",
+    "contains case data for a given case type for Case Worker",
+    "code is HTTP-200"
+  ],
+  "expectedResponse": {
+    "_extends_": "Common_200_Response",
+    "body": {
+      "arrayInMap": "[[ANY]]"
+    }
+  }
+}
