@@ -1,7 +1,7 @@
 {
   "title": "should create an event token for correct inputs",
   "_guid_": "S-579-Prerequisite_Solicitor_2_Token_For_Update_Case",
-  "_extends_" : "Befta_Jurisdiction2_Token_For_Update_Case",
+  "_extends_" : "Befta_Jurisdiction2_Default_Token_Creation_Data_For_Case_Creation_Solicitor_1",
   "users": {
     "invokingUser": {
       "username": "befta.caseworker.2.solicitor.2@gmail.com",

@@ -25,8 +25,8 @@
     "_extends_": "Common_201_Response",
     "headers": {
       "_extends_": "Common_Response_Headers",
-      "Vary": "Accept-Encoding"
-
+      "Vary": "Accept-Encoding",
+      "Transfer-Encoding" : "chunked"
     },
     "body": {
       "id": "[[ANY]]",

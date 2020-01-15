@@ -22,6 +22,9 @@
 	},
 
 	"expectedResponse": {
+    "headers" : {
+      "Transfer-Encoding": "chunked"
+    },
 		"body": {
 			"jurisdiction": "AUTOTEST1",
 			"case_type_id": "AAT_AUTH_15",
