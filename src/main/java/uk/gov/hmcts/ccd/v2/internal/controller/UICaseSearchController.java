@@ -36,7 +36,7 @@ public class UICaseSearchController {
         this.searchResultViewOperation = searchResultViewOperation;
     }
 
-    @GetMapping(
+    @PostMapping(
         path = "/cases",
         headers = {
             V2.EXPERIMENTAL_HEADER
