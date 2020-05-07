@@ -1,39 +1,46 @@
 package uk.gov.hmcts.ccd.domain.service.search.elasticsearch;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.List;
+import java.util.*;
+import java.util.regex.*;
+import java.util.stream.*;
 
 import static java.lang.String.format;
 import static java.util.stream.Collectors.toList;
+import static uk.gov.hmcts.ccd.domain.service.common.AccessControlService.CAN_READ;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.collect.*;
 import com.google.gson.JsonObject;
 import io.searchbox.client.JestClient;
 import io.searchbox.core.MultiSearch;
 import io.searchbox.core.MultiSearchResult;
 import io.searchbox.core.Search;
 import io.searchbox.core.SearchResult;
+import joptsimple.internal.*;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.*;
 import org.jooq.lambda.Unchecked;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
 import uk.gov.hmcts.ccd.ApplicationParams;
-import uk.gov.hmcts.ccd.domain.model.definition.CaseDetails;
-import uk.gov.hmcts.ccd.domain.model.search.CaseSearchResult;
+import uk.gov.hmcts.ccd.data.draft.*;
+import uk.gov.hmcts.ccd.domain.model.definition.*;
+import uk.gov.hmcts.ccd.domain.model.search.*;
+import uk.gov.hmcts.ccd.domain.service.aggregated.*;
+import uk.gov.hmcts.ccd.domain.service.common.*;
 import uk.gov.hmcts.ccd.domain.service.search.elasticsearch.dto.ElasticSearchCaseDetailsDTO;
 import uk.gov.hmcts.ccd.domain.service.search.elasticsearch.mapper.CaseDetailsMapper;
-import uk.gov.hmcts.ccd.domain.service.search.elasticsearch.security.CaseSearchRequestSecurity;
+import uk.gov.hmcts.ccd.domain.service.search.elasticsearch.security.*;
 import uk.gov.hmcts.ccd.endpoint.exceptions.BadSearchRequest;
 import uk.gov.hmcts.ccd.endpoint.exceptions.ServiceException;
 
 @Service
 @Qualifier(ElasticsearchCaseSearchOperation.QUALIFIER)
 @Slf4j
-public class ElasticsearchCaseSearchOperation implements CaseSearchOperation {
+public class ElasticsearchCaseSearchOperation implements CaseSearchOperation, SearchResultViewOperation {
 
     public static final String QUALIFIER = "ElasticsearchCaseSearchOperation";
     static final String MULTI_SEARCH_ERROR_MSG_ROOT_CAUSE = "root_cause";
@@ -43,18 +50,30 @@ public class ElasticsearchCaseSearchOperation implements CaseSearchOperation {
     private final CaseDetailsMapper caseDetailsMapper;
     private final ApplicationParams applicationParams;
     private final CaseSearchRequestSecurity caseSearchRequestSecurity;
+    private final MergeDataToSearchResultOperation mergeDataToSearchResultOperation;
+    private final GetCaseTypeOperation getCaseTypeOperation;
+    private final SearchQueryOperation searchQueryOperation;
+    private final ObjectMapperService objectMapperService;
 
     @Autowired
     public ElasticsearchCaseSearchOperation(JestClient jestClient,
                                             @Qualifier("DefaultObjectMapper") ObjectMapper objectMapper,
                                             CaseDetailsMapper caseDetailsMapper,
                                             ApplicationParams applicationParams,
-                                            CaseSearchRequestSecurity caseSearchRequestSecurity) {
+                                            CaseSearchRequestSecurity caseSearchRequestSecurity,
+                                            MergeDataToSearchResultOperation mergeDataToSearchResultOperation,
+                                            @Qualifier(AuthorisedGetCaseTypeOperation.QUALIFIER) final GetCaseTypeOperation getCaseTypeOperation,
+                                            SearchQueryOperation searchQueryOperation,
+                                            ObjectMapperService objectMapperService) {
         this.jestClient = jestClient;
         this.objectMapper = objectMapper;
         this.caseDetailsMapper = caseDetailsMapper;
         this.applicationParams = applicationParams;
         this.caseSearchRequestSecurity = caseSearchRequestSecurity;
+        this.mergeDataToSearchResultOperation = mergeDataToSearchResultOperation;
+        this.getCaseTypeOperation = getCaseTypeOperation;
+        this.searchQueryOperation = searchQueryOperation;
+        this.objectMapperService = objectMapperService;
     }
 
     @Override
@@ -65,6 +84,37 @@ public class ElasticsearchCaseSearchOperation implements CaseSearchOperation {
         } else {
             throw new BadSearchRequest(result.getErrorMessage());
         }
+    }
+
+    @Override
+    public SearchResultView executeAndConvert(CaseSearchResult request, List<String> caseTypeIds, String searchType) {
+
+        Optional<CaseTypeDefinition> caseType = getCaseTypeOperation.execute(caseTypeIds.get(0), CAN_READ);
+
+        final uk.gov.hmcts.ccd.domain.model.definition.SearchResult searchResult =
+            searchQueryOperation.getSearchResultDefinition(caseType.get(), searchType);
+
+        return mergeDataToSearchResultOperation.execute(caseType.get(), searchResult, request.getCases(), null);
+
+    }
+
+    public JsonNode stringToJsonNode(String jsonSearchRequest) {
+        return objectMapperService.convertStringToObject(jsonSearchRequest, JsonNode.class);
+    }
+
+    public void rejectBlackListedQuery(String jsonSearchRequest) {
+        List<String> blackListedQueries = applicationParams.getSearchBlackList();
+        Optional<String> blackListedQueryOpt = blackListedQueries
+            .stream()
+            .filter(blacklisted -> {
+                Pattern p = Pattern.compile("\\b" + blacklisted + "\\b");
+                Matcher m = p.matcher(jsonSearchRequest);
+                return m.find();
+            })
+            .findFirst();
+        blackListedQueryOpt.ifPresent(blacklisted -> {
+            throw new BadSearchRequest(String.format("Query of type '%s' is not allowed", blacklisted));
+        });
     }
 
     private MultiSearchResult search(CrossCaseTypeSearchRequest request) {

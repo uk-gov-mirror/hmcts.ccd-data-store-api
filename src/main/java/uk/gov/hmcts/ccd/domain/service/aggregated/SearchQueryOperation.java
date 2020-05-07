@@ -87,14 +87,14 @@ public class SearchQueryOperation {
         return mergeDataToSearchResultOperation.execute(caseType.get(), searchResult, draftsAndCases, draftResultError);
     }
 
-    private SearchResult getSearchResultDefinition(final CaseTypeDefinition caseTypeDefinition, final String view) {
+    public SearchResult getSearchResultDefinition(final CaseTypeDefinition caseTypeDefinition, final String view) {
         if (WORKBASKET.equalsIgnoreCase(view)) {
             return uiDefinitionRepository.getWorkBasketResult(caseTypeDefinition.getId());
         }
         return uiDefinitionRepository.getSearchResult(caseTypeDefinition.getId());
     }
 
-    private void addSortOrderFields(MetaData metadata,SearchResult searchResult) {
+    public void addSortOrderFields(MetaData metadata,SearchResult searchResult) {
         List<SortOrderField> sortOrders = getSortOrders(searchResult);
         metadata.setSortOrderFields(sortOrders);
     }
