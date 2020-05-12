@@ -5,11 +5,8 @@ import lombok.extern.slf4j.*;
 import org.springframework.beans.factory.annotation.*;
 import org.springframework.web.bind.annotation.*;
 import uk.gov.hmcts.ccd.domain.model.search.*;
-import uk.gov.hmcts.ccd.domain.service.aggregated.*;
-import uk.gov.hmcts.ccd.domain.service.common.*;
 import uk.gov.hmcts.ccd.domain.service.search.elasticsearch.*;
 import uk.gov.hmcts.ccd.domain.service.search.elasticsearch.security.*;
-import uk.gov.hmcts.ccd.endpoint.std.*;
 import uk.gov.hmcts.ccd.v2.*;
 import uk.gov.hmcts.ccd.v2.internal.resource.*;
 
@@ -17,7 +14,7 @@ import java.time.*;
 import java.util.*;
 
 @RestController
-@RequestMapping(path = "/internal/cases/search")
+@RequestMapping(path = "/internal/searchCases")
 @Slf4j
 public class UICaseSearchController {
     private static final String ERROR_CASE_ID_INVALID = "Case ID is not valid";
@@ -37,7 +34,7 @@ public class UICaseSearchController {
     }
 
     @PostMapping(
-        path = "/cases",
+        path = "",
         headers = {
             V2.EXPERIMENTAL_HEADER
         },
@@ -64,8 +61,6 @@ public class UICaseSearchController {
             message = "Case not found"
         )
     })
-
-
     public SearchResultView getCases(@ApiParam(value = "Case type ID(s)", required = true)
                                      @RequestParam("ctid") List<String> caseTypeIds,
                                      @RequestParam("searchType") final String searchType,
@@ -76,8 +71,6 @@ public class UICaseSearchController {
                                          + " \"_source\":[\"alias.customer\",\"alias.postcode\"]",
                                          required = true)
                                      @RequestBody String jsonSearchRequest) {
-
-
         Instant start = Instant.now();
         elasticsearchCaseSearchOperation.rejectBlackListedQuery(jsonSearchRequest);
 
