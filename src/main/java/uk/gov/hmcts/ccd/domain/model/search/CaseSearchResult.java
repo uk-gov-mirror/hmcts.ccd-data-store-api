@@ -3,6 +3,7 @@ package uk.gov.hmcts.ccd.domain.model.search;
 import java.util.List;
 
 import static java.util.Collections.emptyList;
+import static java.util.stream.Collectors.toList;
 
 import uk.gov.hmcts.ccd.domain.model.definition.CaseDetails;
 
@@ -27,5 +28,9 @@ public class CaseSearchResult {
 
     public Long getTotal() {
         return total;
+    }
+
+    public List<Long> buildCaseReferenceList(String caseTypeId) {
+        return cases.stream().filter(c -> c.getCaseTypeId().equals(caseTypeId)).map(CaseDetails::getReference).collect(toList());
     }
 }

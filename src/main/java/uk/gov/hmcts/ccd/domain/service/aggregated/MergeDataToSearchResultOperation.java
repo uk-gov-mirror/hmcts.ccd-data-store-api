@@ -60,8 +60,8 @@ public class MergeDataToSearchResultOperation {
         return searchResultProcessor.execute(viewColumns, viewItems, resultError);
     }
 
-    private List<SearchResultViewColumn> buildSearchResultViewColumn(CaseTypeDefinition caseTypeDefinition,
-                                                                     SearchResult searchResult) {
+    public List<SearchResultViewColumn> buildSearchResultViewColumn(CaseTypeDefinition caseTypeDefinition,
+                                                                    SearchResult searchResult) {
         final HashSet<String> addedFields = new HashSet<>();
 
         return Arrays.stream(searchResult.getFields())
@@ -113,9 +113,9 @@ public class MergeDataToSearchResultOperation {
             : searchResultField.getDisplayContextParameter();
     }
 
-    private SearchResultViewItem buildSearchResultViewItem(final CaseDetails caseDetails,
-                                                           final CaseTypeDefinition caseTypeDefinition,
-                                                           final SearchResult searchResult) {
+    public SearchResultViewItem buildSearchResultViewItem(final CaseDetails caseDetails,
+                                                          final CaseTypeDefinition caseTypeDefinition,
+                                                          final SearchResult searchResult) {
 
         Map<String, JsonNode> caseData = new HashMap<>(caseDetails.getData());
         Map<String, Object> caseMetadata = new HashMap<>(caseDetails.getMetadata());

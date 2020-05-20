@@ -3,8 +3,10 @@ package uk.gov.hmcts.ccd.v2.internal.controller;
 import io.swagger.annotations.*;
 import lombok.extern.slf4j.*;
 import org.springframework.beans.factory.annotation.*;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import uk.gov.hmcts.ccd.domain.model.search.*;
+import uk.gov.hmcts.ccd.domain.service.aggregated.MergeDataToCaseSearchOperation;
 import uk.gov.hmcts.ccd.domain.service.search.elasticsearch.*;
 import uk.gov.hmcts.ccd.domain.service.search.elasticsearch.security.*;
 import uk.gov.hmcts.ccd.v2.*;
@@ -21,16 +23,16 @@ public class UICaseSearchController {
 
     private final CaseSearchOperation caseSearchOperation;
     private final ElasticsearchCaseSearchOperation elasticsearchCaseSearchOperation;
-    private final SearchResultViewOperation searchResultViewOperation;
+    private final MergeDataToCaseSearchOperation mergeDataToCaseSearchOperation;
 
     @Autowired
     public UICaseSearchController(
         @Qualifier(AuthorisedCaseSearchOperation.QUALIFIER) CaseSearchOperation caseSearchOperation,
-        SearchResultViewOperation searchResultViewOperation,
-        ElasticsearchCaseSearchOperation elasticsearchCaseSearchOperation) {
+        ElasticsearchCaseSearchOperation elasticsearchCaseSearchOperation,
+        MergeDataToCaseSearchOperation mergeDataToCaseSearchOperation) {
         this.caseSearchOperation = caseSearchOperation;
         this.elasticsearchCaseSearchOperation = elasticsearchCaseSearchOperation;
-        this.searchResultViewOperation = searchResultViewOperation;
+        this.mergeDataToCaseSearchOperation = mergeDataToCaseSearchOperation;
     }
 
     @PostMapping(
@@ -50,7 +52,7 @@ public class UICaseSearchController {
         @ApiResponse(
             code = 200,
             message = "Success",
-            response = CaseViewResource.class
+            response = CaseSearchResultViewResource.class
         ),
         @ApiResponse(
             code = 400,
@@ -61,7 +63,8 @@ public class UICaseSearchController {
             message = "Case not found"
         )
     })
-    public SearchResultView getCases(@ApiParam(value = "Case type ID(s)", required = true)
+    // TODO: Docs
+    public ResponseEntity<CaseSearchResultViewResource> getCases(@ApiParam(value = "Case type ID(s)", required = true)
                                      @RequestParam("ctid") List<String> caseTypeIds,
                                      @RequestParam("searchType") final String searchType,
                                      @ApiParam(value = "Native ElasticSearch Search API request. Please refer to the ElasticSearch official "
@@ -79,13 +82,12 @@ public class UICaseSearchController {
             .withSearchRequest(elasticsearchCaseSearchOperation.stringToJsonNode(jsonSearchRequest))
             .build();
 
-        CaseSearchResult caseSearchResult = caseSearchOperation.execute(request);
-
-        SearchResultView result = searchResultViewOperation.executeAndConvert(caseSearchResult, caseTypeIds, searchType);
-
         Duration between = Duration.between(start, Instant.now());
         log.debug("searchCases execution completed in {} millisecs...", between.toMillis());
 
-        return result;
+        CaseSearchResult caseSearchResult = caseSearchOperation.execute(request);
+        UICaseSearchResult result = mergeDataToCaseSearchOperation.execute(request, caseSearchResult, searchType);
+
+        return ResponseEntity.ok(new CaseSearchResultViewResource(result));
     }
 }
