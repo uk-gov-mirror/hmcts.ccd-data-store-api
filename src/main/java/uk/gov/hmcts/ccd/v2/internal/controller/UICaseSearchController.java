@@ -76,7 +76,7 @@ public class UICaseSearchController {
 
         CrossCaseTypeSearchRequest request = elasticsearchQueryHelper.prepareRequest(caseTypeIds, useCase, jsonSearchRequest);
         CaseSearchResult caseSearchResult = caseSearchOperation.execute(request);
-        UICaseSearchResult uiCaseSearchResult = caseSearchOperation.execute(request, caseSearchResult, UseCase.valueOfReference(useCase));
+        UICaseSearchResult uiCaseSearchResult = caseSearchOperation.execute(caseSearchResult, caseTypeIds, UseCase.valueOfReference(useCase));
 
         Duration between = Duration.between(start, Instant.now());
         log.debug("Internal searchCases execution completed in {} millisecs...", between.toMillis());

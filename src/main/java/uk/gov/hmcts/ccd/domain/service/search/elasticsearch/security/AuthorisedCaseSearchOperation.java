@@ -13,7 +13,6 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.MissingNode;
 import com.fasterxml.jackson.databind.node.NullNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
-import com.google.common.collect.Lists;
 import com.jayway.jsonpath.JsonPath;
 import com.jayway.jsonpath.PathNotFoundException;
 import lombok.extern.slf4j.Slf4j;
@@ -24,8 +23,6 @@ import org.springframework.stereotype.Service;
 import uk.gov.hmcts.ccd.data.user.CachedUserRepository;
 import uk.gov.hmcts.ccd.data.user.UserRepository;
 import uk.gov.hmcts.ccd.data.user.UserService;
-import uk.gov.hmcts.ccd.domain.model.aggregated.JurisdictionDisplayProperties;
-import uk.gov.hmcts.ccd.domain.model.aggregated.UserProfile;
 import uk.gov.hmcts.ccd.domain.model.definition.CaseDetails;
 import uk.gov.hmcts.ccd.domain.model.definition.CaseTypeDefinition;
 import uk.gov.hmcts.ccd.domain.model.search.*;
@@ -75,37 +72,37 @@ public class AuthorisedCaseSearchOperation implements CaseSearchOperation {
 
     @Override
     public CaseSearchResult execute(CrossCaseTypeSearchRequest searchRequest) {
-        List<CaseTypeDefinition> authorisedCaseTypes = getAuthorisedCaseTypes(searchRequest);
+        List<CaseTypeDefinition> authorisedCaseTypes = getAuthorisedCaseTypes(searchRequest.getCaseTypeIds());
         CrossCaseTypeSearchRequest authorisedSearchRequest = createAuthorisedSearchRequest(authorisedCaseTypes, searchRequest);
 
         return searchCasesAndFilterFieldsByAccess(authorisedCaseTypes, authorisedSearchRequest);
     }
 
     @Override
-    public UICaseSearchResult execute(CrossCaseTypeSearchRequest searchRequest,
-                                      CaseSearchResult caseSearchResult,
+    public UICaseSearchResult execute(CaseSearchResult caseSearchResult,
+                                      List<String> caseTypeIds,
                                       UseCase useCase) {
-        List<CaseTypeDefinition> authorisedCaseTypes = getAuthorisedCaseTypes(searchRequest);
-        CrossCaseTypeSearchRequest authorisedSearchRequest = createAuthorisedSearchRequest(authorisedCaseTypes, searchRequest);
+        List<String> authorisedCaseTypeIds = getAuthorisedCaseTypes(caseTypeIds)
+            .stream()
+            .map(CaseTypeDefinition::getId)
+            .collect(Collectors.toList());
 
-        // TODO: Filter out fields from result that haven't been requested (RDM-8556)
-        return caseSearchOperation.execute(authorisedSearchRequest, caseSearchResult, useCase);
+        return filterFields(caseSearchResult, authorisedCaseTypeIds, useCase);
     }
 
-    private List<CaseTypeDefinition> getAuthorisedCaseTypes(CrossCaseTypeSearchRequest searchRequest) {
-        return caseTypesFor(searchRequest)
+    private List<CaseTypeDefinition> getAuthorisedCaseTypes(List<String> caseTypeIds) {
+        return caseTypesFor(caseTypeIds)
             .stream()
             .map(caseTypeId -> authorisedCaseDefinitionDataService.getAuthorisedCaseType(caseTypeId, CAN_READ).orElse(null))
             .filter(Objects::nonNull)
             .collect(Collectors.toList());
     }
 
-    private List<String> caseTypesFor(CrossCaseTypeSearchRequest searchRequest) {
-        List<String> caseTypeIds = searchRequest.getCaseTypeIds();
-        if (CollectionUtils.isEmpty(caseTypeIds)) {
+    private List<String> caseTypesFor(List<String> originalCaseTypeIds) {
+        if (CollectionUtils.isEmpty(originalCaseTypeIds)) {
             return userService.getUserCaseTypes().stream().map(CaseTypeDefinition::getId).collect(Collectors.toList());
         } else {
-            return caseTypeIds;
+            return originalCaseTypeIds;
         }
     }
 
@@ -131,6 +128,13 @@ public class AuthorisedCaseSearchOperation implements CaseSearchOperation {
         filterCaseDataByCaseType(authorisedCaseTypes, result.getCases(), authorisedSearchRequest);
 
         return result;
+    }
+
+    private UICaseSearchResult filterFields(CaseSearchResult caseSearchResult,
+                                            List<String> caseTypeIds,
+                                            UseCase useCase) {
+        // TODO: Filter out fields from result that haven't been requested before returning (RDM-8556)
+        return caseSearchOperation.execute(caseSearchResult, caseTypeIds, useCase);
     }
 
     private void filterCaseDataByCaseType(List<CaseTypeDefinition> authorisedCaseTypes,

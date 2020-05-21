@@ -12,7 +12,6 @@ import uk.gov.hmcts.ccd.domain.model.definition.*;
 import uk.gov.hmcts.ccd.domain.model.search.CaseSearchResult;
 import uk.gov.hmcts.ccd.domain.model.search.UseCase;
 import uk.gov.hmcts.ccd.domain.model.search.elasticsearch.*;
-import uk.gov.hmcts.ccd.domain.service.search.elasticsearch.CrossCaseTypeSearchRequest;
 import uk.gov.hmcts.ccd.endpoint.exceptions.BadRequestException;
 
 import java.util.*;
@@ -36,11 +35,11 @@ public class MergeDataToSearchCasesOperation {
         this.searchQueryOperation = searchQueryOperation;
     }
 
-    public UICaseSearchResult execute(final CrossCaseTypeSearchRequest searchRequest,
+    public UICaseSearchResult execute(final List<String> caseTypeIds,
                                       final CaseSearchResult caseSearchResult,
                                       final UseCase useCase) {
         return new UICaseSearchResult(
-            buildHeaders(searchRequest, useCase, caseSearchResult),
+            buildHeaders(caseTypeIds, useCase, caseSearchResult),
             buildItems(useCase, caseSearchResult),
             caseSearchResult.getTotal()
         );
@@ -58,9 +57,9 @@ public class MergeDataToSearchCasesOperation {
         return items;
     }
 
-    private List<UICaseSearchHeader> buildHeaders(CrossCaseTypeSearchRequest request, UseCase useCase, CaseSearchResult caseSearchResult) {
+    private List<UICaseSearchHeader> buildHeaders(List<String> caseTypeIds, UseCase useCase, CaseSearchResult caseSearchResult) {
         List<UICaseSearchHeader> headers = new ArrayList<>();
-        request.getCaseTypeIds().forEach(caseTypeId -> {
+        caseTypeIds.forEach(caseTypeId -> {
             getCaseTypeDefinition(caseTypeId).ifPresent(caseType -> {
                 UICaseSearchHeader caseSearchHeader = buildHeader(useCase, caseSearchResult, caseTypeId, caseType);
                 headers.add(caseSearchHeader);

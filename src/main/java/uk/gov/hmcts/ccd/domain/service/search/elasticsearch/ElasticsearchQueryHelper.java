@@ -5,7 +5,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.fasterxml.jackson.databind.node.TextNode;
-import com.google.common.base.Strings;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.collections.CollectionUtils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -82,24 +81,34 @@ public class ElasticsearchQueryHelper {
     private void applyConfiguredSort(JsonNode searchRequest, List<String> caseTypeIds, UseCase useCase) {
         JsonNode sortNode = searchRequest.get(SORT);
         if (sortNode == null) {
-            ArrayNode appliedSortsNode = objectMapper.createArrayNode();
-            caseTypeIds.forEach(caseTypeId -> {
-                Optional<CaseTypeDefinition> caseTypeOpt = getCaseTypeOperation.execute(caseTypeId, CAN_READ);
-                caseTypeOpt.ifPresent(caseType -> {
-                    List<SortOrderField> sortOrderFields = searchQueryOperation.getSortOrders(caseType, useCase);
-                    sortOrderFields.forEach(field -> {
-                        ObjectNode objectNode = objectMapper.createObjectNode();
-                        // TODO: Handle metadata sorts and fields without keyword
-                        // TODO: If alias, then use _keyword instead of .keyword
-                        // TODO: If text, add keyword, otherwise ignore
-                        objectNode.set("data." + field.getCaseFieldId() + ".keyword", new TextNode(field.getDirection()));
-                        appliedSortsNode.add(objectNode);
-                    });
-                });
-            });
-
+            ArrayNode appliedSortsNode = buildSortNode(caseTypeIds, useCase);
             ((ObjectNode)searchRequest).set(SORT, appliedSortsNode);
         }
+    }
+
+    private ArrayNode buildSortNode(List<String> caseTypeIds, UseCase useCase) {
+        ArrayNode sortNode = objectMapper.createArrayNode();
+        caseTypeIds.forEach(caseTypeId -> addCaseTypeSorts(caseTypeId, useCase, sortNode));
+        return sortNode;
+    }
+
+    private void addCaseTypeSorts(String caseTypeId, UseCase useCase, ArrayNode sortNode) {
+        Optional<CaseTypeDefinition> caseTypeOpt = getCaseTypeOperation.execute(caseTypeId, CAN_READ);
+        caseTypeOpt.ifPresent(caseType -> {
+            searchQueryOperation.getSortOrders(caseType, useCase).forEach(field -> {
+                ObjectNode sortOrderFieldNode = buildSortOrderFieldNode(field);
+                sortNode.add(sortOrderFieldNode);
+            });
+        });
+    }
+
+    private ObjectNode buildSortOrderFieldNode(SortOrderField field) {
+        ObjectNode objectNode = objectMapper.createObjectNode();
+        // TODO: Handle metadata sorts and fields without keyword
+        // TODO: If alias, then use _keyword instead of .keyword
+        // TODO: If text, add keyword, otherwise ignore
+        objectNode.set("data." + field.getCaseFieldId() + ".keyword", new TextNode(field.getDirection()));
+        return objectNode;
     }
 
     private JsonNode stringToJsonNode(String jsonSearchRequest) {
