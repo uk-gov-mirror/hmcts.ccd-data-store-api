@@ -5,9 +5,9 @@ import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 import lombok.NonNull;
 import org.springframework.hateoas.RepresentationModel;
-import uk.gov.hmcts.ccd.domain.model.search.SearchResultViewItem;
-import uk.gov.hmcts.ccd.domain.model.search.UICaseSearchHeader;
-import uk.gov.hmcts.ccd.domain.model.search.UICaseSearchResult;
+import uk.gov.hmcts.ccd.domain.model.search.elasticsearch.SearchResultViewItem;
+import uk.gov.hmcts.ccd.domain.model.search.elasticsearch.UICaseSearchHeader;
+import uk.gov.hmcts.ccd.domain.model.search.elasticsearch.UICaseSearchResult;
 
 import java.util.List;
 

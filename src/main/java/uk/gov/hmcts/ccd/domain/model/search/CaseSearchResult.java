@@ -30,7 +30,7 @@ public class CaseSearchResult {
         return total;
     }
 
-    public List<Long> buildCaseReferenceList(String caseTypeId) {
-        return cases.stream().filter(c -> c.getCaseTypeId().equals(caseTypeId)).map(CaseDetails::getReference).collect(toList());
+    public List<String> buildCaseReferenceList(String caseTypeId) {
+        return cases.stream().filter(c -> c.getCaseTypeId().equals(caseTypeId)).map(CaseDetails::getReferenceAsString).collect(toList());
     }
 }

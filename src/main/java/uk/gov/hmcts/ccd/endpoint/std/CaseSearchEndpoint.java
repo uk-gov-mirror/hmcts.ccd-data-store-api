@@ -21,6 +21,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import uk.gov.hmcts.ccd.domain.model.search.CaseSearchResult;
+import uk.gov.hmcts.ccd.domain.model.search.UseCase;
 import uk.gov.hmcts.ccd.domain.service.search.elasticsearch.*;
 import uk.gov.hmcts.ccd.domain.service.search.elasticsearch.security.AuthorisedCaseSearchOperation;
 
@@ -36,13 +37,13 @@ import uk.gov.hmcts.ccd.domain.service.search.elasticsearch.security.AuthorisedC
 public class CaseSearchEndpoint {
 
     private final CaseSearchOperation caseSearchOperation;
-    private final ElasticsearchCaseSearchOperation elasticsearchCaseSearchOperation;
+    private final ElasticsearchQueryHelper elasticsearchQueryHelper;
 
     @Autowired
     public CaseSearchEndpoint(@Qualifier(AuthorisedCaseSearchOperation.QUALIFIER) CaseSearchOperation caseSearchOperation,
-                              ElasticsearchCaseSearchOperation elasticsearchCaseSearchOperation) {
+                              ElasticsearchQueryHelper elasticsearchQueryHelper) {
         this.caseSearchOperation = caseSearchOperation;
-        this.elasticsearchCaseSearchOperation = elasticsearchCaseSearchOperation;
+        this.elasticsearchQueryHelper = elasticsearchQueryHelper;
     }
 
     @PostMapping(value = "/searchCases")
@@ -63,12 +64,11 @@ public class CaseSearchEndpoint {
 
         Instant start = Instant.now();
 
-        elasticsearchCaseSearchOperation.rejectBlackListedQuery(jsonSearchRequest);
-
-        CrossCaseTypeSearchRequest request = new CrossCaseTypeSearchRequest.Builder()
-            .withCaseTypes(caseTypeIds)
-            .withSearchRequest(elasticsearchCaseSearchOperation.stringToJsonNode(jsonSearchRequest))
-            .build();
+        CrossCaseTypeSearchRequest request = elasticsearchQueryHelper.prepareRequest(
+            caseTypeIds,
+            UseCase.DEFAULT.getReference(),
+            jsonSearchRequest
+        );
 
         CaseSearchResult result = caseSearchOperation.execute(request);
 

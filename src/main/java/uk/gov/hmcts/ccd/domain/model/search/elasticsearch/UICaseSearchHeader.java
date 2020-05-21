@@ -1,4 +1,4 @@
-package uk.gov.hmcts.ccd.domain.model.search;
+package uk.gov.hmcts.ccd.domain.model.search.elasticsearch;
 
 import lombok.Data;
 import lombok.NonNull;
@@ -13,5 +13,5 @@ public class UICaseSearchHeader {
     @NonNull
     private List<SearchResultViewColumn> fields;
     @NonNull
-    private List<Long> cases;
+    private List<String> cases;
 }

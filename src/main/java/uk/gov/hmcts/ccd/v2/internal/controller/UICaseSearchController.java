@@ -5,7 +5,9 @@ import lombok.extern.slf4j.*;
 import org.springframework.beans.factory.annotation.*;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import uk.gov.hmcts.ccd.data.user.UserService;
 import uk.gov.hmcts.ccd.domain.model.search.*;
+import uk.gov.hmcts.ccd.domain.model.search.elasticsearch.UICaseSearchResult;
 import uk.gov.hmcts.ccd.domain.service.aggregated.MergeDataToCaseSearchOperation;
 import uk.gov.hmcts.ccd.domain.service.search.elasticsearch.*;
 import uk.gov.hmcts.ccd.domain.service.search.elasticsearch.security.*;
@@ -22,17 +24,17 @@ public class UICaseSearchController {
     private static final String ERROR_CASE_ID_INVALID = "Case ID is not valid";
 
     private final CaseSearchOperation caseSearchOperation;
-    private final ElasticsearchCaseSearchOperation elasticsearchCaseSearchOperation;
     private final MergeDataToCaseSearchOperation mergeDataToCaseSearchOperation;
+    private final ElasticsearchQueryHelper elasticsearchQueryHelper;
 
     @Autowired
     public UICaseSearchController(
         @Qualifier(AuthorisedCaseSearchOperation.QUALIFIER) CaseSearchOperation caseSearchOperation,
-        ElasticsearchCaseSearchOperation elasticsearchCaseSearchOperation,
-        MergeDataToCaseSearchOperation mergeDataToCaseSearchOperation) {
+        MergeDataToCaseSearchOperation mergeDataToCaseSearchOperation,
+        ElasticsearchQueryHelper elasticsearchQueryHelper) {
         this.caseSearchOperation = caseSearchOperation;
-        this.elasticsearchCaseSearchOperation = elasticsearchCaseSearchOperation;
         this.mergeDataToCaseSearchOperation = mergeDataToCaseSearchOperation;
+        this.elasticsearchQueryHelper = elasticsearchQueryHelper;
     }
 
     @PostMapping(
@@ -64,9 +66,10 @@ public class UICaseSearchController {
         )
     })
     // TODO: Docs
-    public ResponseEntity<CaseSearchResultViewResource> getCases(@ApiParam(value = "Case type ID(s)", required = true)
-                                     @RequestParam("ctid") List<String> caseTypeIds,
-                                     @RequestParam("searchType") final String searchType,
+    public ResponseEntity<CaseSearchResultViewResource> getCases(@ApiParam(value = "Case type ID(s)")
+                                     @RequestParam(value = "ctid", required = false) List<String> caseTypeIds,
+                                     @ApiParam(value = "Case type ID(s)")
+                                     @RequestParam(value = "usecase", required = false) final String useCase,
                                      @ApiParam(value = "Native ElasticSearch Search API request. Please refer to the ElasticSearch official "
                                          + "documentation. For cross case type search, "
                                          + "the search results will contain only metadata by default (no case field data). To get case data in the "
@@ -75,19 +78,14 @@ public class UICaseSearchController {
                                          required = true)
                                      @RequestBody String jsonSearchRequest) {
         Instant start = Instant.now();
-        elasticsearchCaseSearchOperation.rejectBlackListedQuery(jsonSearchRequest);
 
-        CrossCaseTypeSearchRequest request = new CrossCaseTypeSearchRequest.Builder()
-            .withCaseTypes(caseTypeIds)
-            .withSearchRequest(elasticsearchCaseSearchOperation.stringToJsonNode(jsonSearchRequest))
-            .build();
+        CrossCaseTypeSearchRequest request = elasticsearchQueryHelper.prepareRequest(caseTypeIds, useCase, jsonSearchRequest);
+        CaseSearchResult caseSearchResult = caseSearchOperation.execute(request);
+        UICaseSearchResult uiCaseSearchResult = mergeDataToCaseSearchOperation.execute(request, caseSearchResult, UseCase.valueOfReference(useCase));
 
         Duration between = Duration.between(start, Instant.now());
-        log.debug("searchCases execution completed in {} millisecs...", between.toMillis());
+        log.debug("Internal searchCases execution completed in {} millisecs...", between.toMillis());
 
-        CaseSearchResult caseSearchResult = caseSearchOperation.execute(request);
-        UICaseSearchResult result = mergeDataToCaseSearchOperation.execute(request, caseSearchResult, searchType);
-
-        return ResponseEntity.ok(new CaseSearchResultViewResource(result));
+        return ResponseEntity.ok(new CaseSearchResultViewResource(uiCaseSearchResult));
     }
 }

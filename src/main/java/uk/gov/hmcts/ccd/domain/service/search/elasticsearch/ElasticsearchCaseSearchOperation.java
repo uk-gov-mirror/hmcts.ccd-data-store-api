@@ -16,7 +16,6 @@ import org.springframework.stereotype.Service;
 import uk.gov.hmcts.ccd.ApplicationParams;
 import uk.gov.hmcts.ccd.domain.model.definition.CaseDetails;
 import uk.gov.hmcts.ccd.domain.model.search.CaseSearchResult;
-import uk.gov.hmcts.ccd.domain.service.common.ObjectMapperService;
 import uk.gov.hmcts.ccd.domain.service.search.elasticsearch.dto.ElasticSearchCaseDetailsDTO;
 import uk.gov.hmcts.ccd.domain.service.search.elasticsearch.mapper.CaseDetailsMapper;
 import uk.gov.hmcts.ccd.domain.service.search.elasticsearch.security.CaseSearchRequestSecurity;
@@ -27,9 +26,6 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
-import java.util.Optional;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 import static java.lang.String.format;
 import static java.util.stream.Collectors.toList;
@@ -47,21 +43,18 @@ public class ElasticsearchCaseSearchOperation implements CaseSearchOperation {
     private final CaseDetailsMapper caseDetailsMapper;
     private final ApplicationParams applicationParams;
     private final CaseSearchRequestSecurity caseSearchRequestSecurity;
-    private final ObjectMapperService objectMapperService;
 
     @Autowired
     public ElasticsearchCaseSearchOperation(JestClient jestClient,
                                             @Qualifier("DefaultObjectMapper") ObjectMapper objectMapper,
                                             CaseDetailsMapper caseDetailsMapper,
                                             ApplicationParams applicationParams,
-                                            CaseSearchRequestSecurity caseSearchRequestSecurity,
-                                            ObjectMapperService objectMapperService) {
+                                            CaseSearchRequestSecurity caseSearchRequestSecurity) {
         this.jestClient = jestClient;
         this.objectMapper = objectMapper;
         this.caseDetailsMapper = caseDetailsMapper;
         this.applicationParams = applicationParams;
         this.caseSearchRequestSecurity = caseSearchRequestSecurity;
-        this.objectMapperService = objectMapperService;
     }
 
     @Override
@@ -72,25 +65,6 @@ public class ElasticsearchCaseSearchOperation implements CaseSearchOperation {
         } else {
             throw new BadSearchRequest(result.getErrorMessage());
         }
-    }
-
-    public JsonNode stringToJsonNode(String jsonSearchRequest) {
-        return objectMapperService.convertStringToObject(jsonSearchRequest, JsonNode.class);
-    }
-
-    public void rejectBlackListedQuery(String jsonSearchRequest) {
-        List<String> blackListedQueries = applicationParams.getSearchBlackList();
-        Optional<String> blackListedQueryOpt = blackListedQueries
-            .stream()
-            .filter(blacklisted -> {
-                Pattern p = Pattern.compile("\\b" + blacklisted + "\\b");
-                Matcher m = p.matcher(jsonSearchRequest);
-                return m.find();
-            })
-            .findFirst();
-        blackListedQueryOpt.ifPresent(blacklisted -> {
-            throw new BadSearchRequest(String.format("Query of type '%s' is not allowed", blacklisted));
-        });
     }
 
     private MultiSearchResult search(CrossCaseTypeSearchRequest request) {

@@ -1,10 +1,6 @@
 package uk.gov.hmcts.ccd.domain.service.search.elasticsearch.security;
 
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Optional;
-import java.util.Set;
+import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -17,14 +13,19 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.MissingNode;
 import com.fasterxml.jackson.databind.node.NullNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.google.common.collect.Lists;
 import com.jayway.jsonpath.JsonPath;
 import com.jayway.jsonpath.PathNotFoundException;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.collections.CollectionUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
 import uk.gov.hmcts.ccd.data.user.CachedUserRepository;
 import uk.gov.hmcts.ccd.data.user.UserRepository;
+import uk.gov.hmcts.ccd.data.user.UserService;
+import uk.gov.hmcts.ccd.domain.model.aggregated.JurisdictionDisplayProperties;
+import uk.gov.hmcts.ccd.domain.model.aggregated.UserProfile;
 import uk.gov.hmcts.ccd.domain.model.definition.CaseDetails;
 import uk.gov.hmcts.ccd.domain.model.definition.CaseTypeDefinition;
 import uk.gov.hmcts.ccd.domain.model.search.*;
@@ -50,6 +51,7 @@ public class AuthorisedCaseSearchOperation implements CaseSearchOperation {
     private final SecurityClassificationService classificationService;
     private final ObjectMapperService objectMapperService;
     private final UserRepository userRepository;
+    private final UserService userService;
 
     @Autowired
     public AuthorisedCaseSearchOperation(
@@ -58,7 +60,8 @@ public class AuthorisedCaseSearchOperation implements CaseSearchOperation {
         AccessControlService accessControlService,
         SecurityClassificationService classificationService,
         ObjectMapperService objectMapperService,
-        @Qualifier(CachedUserRepository.QUALIFIER) UserRepository userRepository) {
+        @Qualifier(CachedUserRepository.QUALIFIER) UserRepository userRepository,
+        UserService userService) {
 
         this.caseSearchOperation = caseSearchOperation;
         this.authorisedCaseDefinitionDataService = authorisedCaseDefinitionDataService;
@@ -66,6 +69,7 @@ public class AuthorisedCaseSearchOperation implements CaseSearchOperation {
         this.classificationService = classificationService;
         this.objectMapperService = objectMapperService;
         this.userRepository = userRepository;
+        this.userService = userService;
     }
 
     @Override
@@ -77,11 +81,20 @@ public class AuthorisedCaseSearchOperation implements CaseSearchOperation {
     }
 
     private List<CaseTypeDefinition> getAuthorisedCaseTypes(CrossCaseTypeSearchRequest searchRequest) {
-        return searchRequest.getCaseTypeIds()
+        return caseTypesFor(searchRequest)
             .stream()
             .map(caseTypeId -> authorisedCaseDefinitionDataService.getAuthorisedCaseType(caseTypeId, CAN_READ).orElse(null))
             .filter(Objects::nonNull)
             .collect(Collectors.toList());
+    }
+
+    private List<String> caseTypesFor(CrossCaseTypeSearchRequest searchRequest) {
+        List<String> caseTypeIds = searchRequest.getCaseTypeIds();
+        if (CollectionUtils.isEmpty(caseTypeIds)) {
+            return userService.getUserCaseTypes().stream().map(CaseTypeDefinition::getId).collect(Collectors.toList());
+        } else {
+            return caseTypeIds;
+        }
     }
 
     private CrossCaseTypeSearchRequest createAuthorisedSearchRequest(List<CaseTypeDefinition> authorisedCaseTypes,
