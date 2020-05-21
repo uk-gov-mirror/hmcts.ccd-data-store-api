@@ -5,10 +5,8 @@ import lombok.extern.slf4j.*;
 import org.springframework.beans.factory.annotation.*;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import uk.gov.hmcts.ccd.data.user.UserService;
 import uk.gov.hmcts.ccd.domain.model.search.*;
 import uk.gov.hmcts.ccd.domain.model.search.elasticsearch.UICaseSearchResult;
-import uk.gov.hmcts.ccd.domain.service.aggregated.MergeDataToCaseSearchOperation;
 import uk.gov.hmcts.ccd.domain.service.search.elasticsearch.*;
 import uk.gov.hmcts.ccd.domain.service.search.elasticsearch.security.*;
 import uk.gov.hmcts.ccd.v2.*;
@@ -24,16 +22,13 @@ public class UICaseSearchController {
     private static final String ERROR_CASE_ID_INVALID = "Case ID is not valid";
 
     private final CaseSearchOperation caseSearchOperation;
-    private final MergeDataToCaseSearchOperation mergeDataToCaseSearchOperation;
     private final ElasticsearchQueryHelper elasticsearchQueryHelper;
 
     @Autowired
     public UICaseSearchController(
         @Qualifier(AuthorisedCaseSearchOperation.QUALIFIER) CaseSearchOperation caseSearchOperation,
-        MergeDataToCaseSearchOperation mergeDataToCaseSearchOperation,
         ElasticsearchQueryHelper elasticsearchQueryHelper) {
         this.caseSearchOperation = caseSearchOperation;
-        this.mergeDataToCaseSearchOperation = mergeDataToCaseSearchOperation;
         this.elasticsearchQueryHelper = elasticsearchQueryHelper;
     }
 
@@ -81,7 +76,7 @@ public class UICaseSearchController {
 
         CrossCaseTypeSearchRequest request = elasticsearchQueryHelper.prepareRequest(caseTypeIds, useCase, jsonSearchRequest);
         CaseSearchResult caseSearchResult = caseSearchOperation.execute(request);
-        UICaseSearchResult uiCaseSearchResult = mergeDataToCaseSearchOperation.execute(request, caseSearchResult, UseCase.valueOfReference(useCase));
+        UICaseSearchResult uiCaseSearchResult = caseSearchOperation.execute(request, caseSearchResult, UseCase.valueOfReference(useCase));
 
         Duration between = Duration.between(start, Instant.now());
         log.debug("Internal searchCases execution completed in {} millisecs...", between.toMillis());

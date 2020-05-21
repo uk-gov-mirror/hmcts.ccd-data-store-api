@@ -3,8 +3,8 @@ package uk.gov.hmcts.ccd.domain.service.aggregated;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.TextNode;
 import org.apache.commons.lang3.StringUtils;
-import org.elasticsearch.common.Strings;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.stereotype.Service;
 import uk.gov.hmcts.ccd.data.user.CachedUserRepository;
 import uk.gov.hmcts.ccd.data.user.UserRepository;
 import uk.gov.hmcts.ccd.domain.model.aggregated.CommonField;
@@ -15,27 +15,22 @@ import uk.gov.hmcts.ccd.domain.model.search.elasticsearch.*;
 import uk.gov.hmcts.ccd.domain.service.search.elasticsearch.CrossCaseTypeSearchRequest;
 import uk.gov.hmcts.ccd.endpoint.exceptions.BadRequestException;
 
-import javax.inject.Named;
-import javax.inject.Singleton;
 import java.util.*;
 import java.util.stream.Collectors;
 
-import static com.fasterxml.jackson.databind.node.JsonNodeFactory.instance;
 import static java.lang.String.format;
-import static uk.gov.hmcts.ccd.domain.model.definition.FieldTypeDefinition.LABEL;
 import static uk.gov.hmcts.ccd.domain.service.common.AccessControlService.CAN_READ;
 
-@Named
-@Singleton
-public class MergeDataToCaseSearchOperation {
+@Service
+public class MergeDataToSearchCasesOperation {
 
     private final UserRepository userRepository;
     private final GetCaseTypeOperation getCaseTypeOperation;
     private final SearchQueryOperation searchQueryOperation;
 
-    public MergeDataToCaseSearchOperation(@Qualifier(CachedUserRepository.QUALIFIER) final UserRepository userRepository,
-                                          @Qualifier(AuthorisedGetCaseTypeOperation.QUALIFIER) final GetCaseTypeOperation getCaseTypeOperation,
-                                          final SearchQueryOperation searchQueryOperation) {
+    public MergeDataToSearchCasesOperation(@Qualifier(CachedUserRepository.QUALIFIER) final UserRepository userRepository,
+                                           @Qualifier(AuthorisedGetCaseTypeOperation.QUALIFIER) final GetCaseTypeOperation getCaseTypeOperation,
+                                           final SearchQueryOperation searchQueryOperation) {
         this.userRepository = userRepository;
         this.getCaseTypeOperation = getCaseTypeOperation;
         this.searchQueryOperation = searchQueryOperation;
@@ -44,23 +39,11 @@ public class MergeDataToCaseSearchOperation {
     public UICaseSearchResult execute(final CrossCaseTypeSearchRequest searchRequest,
                                       final CaseSearchResult caseSearchResult,
                                       final UseCase useCase) {
-        UICaseSearchResult uiCaseSearchResult = new UICaseSearchResult(
+        return new UICaseSearchResult(
             buildHeaders(searchRequest, useCase, caseSearchResult),
             buildItems(useCase, caseSearchResult),
             caseSearchResult.getTotal()
         );
-
-        if (useCase != UseCase.DEFAULT) {
-            // Return appropriate use case fields
-        } else {
-            // Default use case - all case fields with permissions
-        }
-
-        return uiCaseSearchResult;
-    }
-
-    private Optional<CaseTypeDefinition> getCaseTypeDefinition(String caseTypeId) {
-        return getCaseTypeOperation.execute(caseTypeId, CAN_READ);
     }
 
     private List<SearchResultViewItem> buildItems(UseCase useCase, CaseSearchResult caseSearchResult) {
@@ -77,7 +60,6 @@ public class MergeDataToCaseSearchOperation {
 
     private List<UICaseSearchHeader> buildHeaders(CrossCaseTypeSearchRequest request, UseCase useCase, CaseSearchResult caseSearchResult) {
         List<UICaseSearchHeader> headers = new ArrayList<>();
-        // TODO: Remove unauthorised case types
         request.getCaseTypeIds().forEach(caseTypeId -> {
             getCaseTypeDefinition(caseTypeId).ifPresent(caseType -> {
                 UICaseSearchHeader caseSearchHeader = buildHeader(useCase, caseSearchResult, caseTypeId, caseType);
@@ -86,6 +68,10 @@ public class MergeDataToCaseSearchOperation {
         });
 
         return headers;
+    }
+
+    private Optional<CaseTypeDefinition> getCaseTypeDefinition(String caseTypeId) {
+        return getCaseTypeOperation.execute(caseTypeId, CAN_READ);
     }
 
     private UICaseSearchHeader buildHeader(UseCase useCase, CaseSearchResult caseSearchResult, String caseTypeId, CaseTypeDefinition caseType) {
@@ -182,11 +168,4 @@ public class MergeDataToCaseSearchOperation {
         newResults.putAll(metadata);
         return newResults;
     }
-
-//    private Map<String, TextNode> getLabelsFromCaseFields(CaseTypeDefinition caseTypeDefinition) {
-//        return caseTypeDefinition.getCaseFieldDefinitions()
-//            .stream()
-//            .filter(caseField -> LABEL.equals(caseField.getFieldTypeDefinition().getType()))
-//            .collect(Collectors.toMap(CaseFieldDefinition::getId, caseField -> instance.textNode(caseField.getLabel())));
-//    }
 }

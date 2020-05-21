@@ -16,6 +16,9 @@ import org.springframework.stereotype.Service;
 import uk.gov.hmcts.ccd.ApplicationParams;
 import uk.gov.hmcts.ccd.domain.model.definition.CaseDetails;
 import uk.gov.hmcts.ccd.domain.model.search.CaseSearchResult;
+import uk.gov.hmcts.ccd.domain.model.search.UseCase;
+import uk.gov.hmcts.ccd.domain.model.search.elasticsearch.UICaseSearchResult;
+import uk.gov.hmcts.ccd.domain.service.aggregated.MergeDataToSearchCasesOperation;
 import uk.gov.hmcts.ccd.domain.service.search.elasticsearch.dto.ElasticSearchCaseDetailsDTO;
 import uk.gov.hmcts.ccd.domain.service.search.elasticsearch.mapper.CaseDetailsMapper;
 import uk.gov.hmcts.ccd.domain.service.search.elasticsearch.security.CaseSearchRequestSecurity;
@@ -43,18 +46,21 @@ public class ElasticsearchCaseSearchOperation implements CaseSearchOperation {
     private final CaseDetailsMapper caseDetailsMapper;
     private final ApplicationParams applicationParams;
     private final CaseSearchRequestSecurity caseSearchRequestSecurity;
+    private final MergeDataToSearchCasesOperation mergeDataToSearchCasesOperation;
 
     @Autowired
     public ElasticsearchCaseSearchOperation(JestClient jestClient,
                                             @Qualifier("DefaultObjectMapper") ObjectMapper objectMapper,
                                             CaseDetailsMapper caseDetailsMapper,
                                             ApplicationParams applicationParams,
-                                            CaseSearchRequestSecurity caseSearchRequestSecurity) {
+                                            CaseSearchRequestSecurity caseSearchRequestSecurity,
+                                            MergeDataToSearchCasesOperation mergeDataToSearchCasesOperation) {
         this.jestClient = jestClient;
         this.objectMapper = objectMapper;
         this.caseDetailsMapper = caseDetailsMapper;
         this.applicationParams = applicationParams;
         this.caseSearchRequestSecurity = caseSearchRequestSecurity;
+        this.mergeDataToSearchCasesOperation = mergeDataToSearchCasesOperation;
     }
 
     @Override
@@ -65,6 +71,11 @@ public class ElasticsearchCaseSearchOperation implements CaseSearchOperation {
         } else {
             throw new BadSearchRequest(result.getErrorMessage());
         }
+    }
+
+    @Override
+    public UICaseSearchResult execute(CrossCaseTypeSearchRequest searchRequest, CaseSearchResult caseSearchResult, UseCase useCase) {
+        return mergeDataToSearchCasesOperation.execute(searchRequest, caseSearchResult, useCase);
     }
 
     private MultiSearchResult search(CrossCaseTypeSearchRequest request) {

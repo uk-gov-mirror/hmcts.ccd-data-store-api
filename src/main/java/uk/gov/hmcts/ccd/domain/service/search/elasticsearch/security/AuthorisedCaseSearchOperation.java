@@ -29,6 +29,7 @@ import uk.gov.hmcts.ccd.domain.model.aggregated.UserProfile;
 import uk.gov.hmcts.ccd.domain.model.definition.CaseDetails;
 import uk.gov.hmcts.ccd.domain.model.definition.CaseTypeDefinition;
 import uk.gov.hmcts.ccd.domain.model.search.*;
+import uk.gov.hmcts.ccd.domain.model.search.elasticsearch.UICaseSearchResult;
 import uk.gov.hmcts.ccd.domain.service.common.AccessControlService;
 import uk.gov.hmcts.ccd.domain.service.common.ObjectMapperService;
 import uk.gov.hmcts.ccd.domain.service.common.SecurityClassificationService;
@@ -78,6 +79,17 @@ public class AuthorisedCaseSearchOperation implements CaseSearchOperation {
         CrossCaseTypeSearchRequest authorisedSearchRequest = createAuthorisedSearchRequest(authorisedCaseTypes, searchRequest);
 
         return searchCasesAndFilterFieldsByAccess(authorisedCaseTypes, authorisedSearchRequest);
+    }
+
+    @Override
+    public UICaseSearchResult execute(CrossCaseTypeSearchRequest searchRequest,
+                                      CaseSearchResult caseSearchResult,
+                                      UseCase useCase) {
+        List<CaseTypeDefinition> authorisedCaseTypes = getAuthorisedCaseTypes(searchRequest);
+        CrossCaseTypeSearchRequest authorisedSearchRequest = createAuthorisedSearchRequest(authorisedCaseTypes, searchRequest);
+
+        // TODO: Filter out fields from result that haven't been requested (RDM-8556)
+        return caseSearchOperation.execute(authorisedSearchRequest, caseSearchResult, useCase);
     }
 
     private List<CaseTypeDefinition> getAuthorisedCaseTypes(CrossCaseTypeSearchRequest searchRequest) {

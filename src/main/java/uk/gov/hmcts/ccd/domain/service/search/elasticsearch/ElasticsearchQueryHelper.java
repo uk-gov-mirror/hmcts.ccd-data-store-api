@@ -34,7 +34,6 @@ import static uk.gov.hmcts.ccd.domain.service.common.AccessControlService.CAN_RE
 @Slf4j
 public class ElasticsearchQueryHelper {
 
-    public static final String DEFAULT_USE_CASE = "";
     private static final String SORT = "sort";
 
     private final ObjectMapper objectMapper;
