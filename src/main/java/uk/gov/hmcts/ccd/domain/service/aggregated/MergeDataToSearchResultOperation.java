@@ -25,17 +25,13 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.stream.Collectors;
 
-import static com.fasterxml.jackson.databind.node.JsonNodeFactory.instance;
 import static java.lang.String.format;
-import static uk.gov.hmcts.ccd.domain.model.definition.FieldTypeDefinition.LABEL;
 
 @Named
 @Singleton
 public class MergeDataToSearchResultOperation {
-    private static final String NESTED_ELEMENT_NOT_FOUND_FOR_PATH = "Nested element not found for path %s";
 
     private final UserRepository userRepository;
     private final SearchResultProcessor searchResultProcessor;
@@ -60,7 +56,7 @@ public class MergeDataToSearchResultOperation {
         return searchResultProcessor.execute(viewColumns, viewItems, resultError);
     }
 
-    public List<SearchResultViewColumn> buildSearchResultViewColumn(CaseTypeDefinition caseTypeDefinition,
+    private List<SearchResultViewColumn> buildSearchResultViewColumn(CaseTypeDefinition caseTypeDefinition,
                                                                     SearchResult searchResult) {
         final HashSet<String> addedFields = new HashSet<>();
 
@@ -113,13 +109,13 @@ public class MergeDataToSearchResultOperation {
             : searchResultField.getDisplayContextParameter();
     }
 
-    public SearchResultViewItem buildSearchResultViewItem(final CaseDetails caseDetails,
+    private SearchResultViewItem buildSearchResultViewItem(final CaseDetails caseDetails,
                                                           final CaseTypeDefinition caseTypeDefinition,
                                                           final SearchResult searchResult) {
 
         Map<String, JsonNode> caseData = new HashMap<>(caseDetails.getData());
         Map<String, Object> caseMetadata = new HashMap<>(caseDetails.getMetadata());
-        Map<String, TextNode> labels = getLabelsFromCaseFields(caseTypeDefinition);
+        Map<String, TextNode> labels = caseTypeDefinition.getLabelsFromCaseFields();
         Map<String, Object> caseFields = prepareData(searchResult, caseData, caseMetadata, labels);
 
         String caseId = caseDetails.hasCaseReference() ? caseDetails.getReferenceAsString() : caseDetails.getId();
@@ -137,7 +133,7 @@ public class MergeDataToSearchResultOperation {
             JsonNode jsonNode = caseData.get(searchResultField.getCaseFieldId());
             if (jsonNode != null) {
                 newResults.put(searchResultField.getCaseFieldId() + "." + searchResultField.getCaseFieldPath(),
-                    getObjectByPath(searchResultField, jsonNode));
+                    searchResultField.getObjectByPath(jsonNode));
             }
         });
 
@@ -146,34 +142,6 @@ public class MergeDataToSearchResultOperation {
         newResults.putAll(metadata);
 
         return newResults;
-    }
-
-    private Object getObjectByPath(SearchResultField searchResultField, JsonNode value) {
-
-        List<String> pathElements = searchResultField.getCaseFieldPathElements();
-
-        return reduce(value, pathElements, searchResultField.getCaseFieldPath());
-    }
-
-    private Object reduce(JsonNode caseFields, List<String> pathElements, String path) {
-        String firstPathElement = pathElements.get(0);
-
-        JsonNode caseField = Optional.ofNullable(caseFields.get(firstPathElement))
-            .orElseThrow(() -> new BadRequestException(format(NESTED_ELEMENT_NOT_FOUND_FOR_PATH, path)));
-
-        if (pathElements.size() == 1) {
-            return caseField;
-        } else {
-            List<String> tail = pathElements.subList(1, pathElements.size());
-            return reduce(caseField, tail, path);
-        }
-    }
-
-    private Map<String, TextNode> getLabelsFromCaseFields(CaseTypeDefinition caseTypeDefinition) {
-        return caseTypeDefinition.getCaseFieldDefinitions()
-            .stream()
-            .filter(caseField -> LABEL.equals(caseField.getFieldTypeDefinition().getType()))
-            .collect(Collectors.toMap(CaseFieldDefinition::getId, caseField -> instance.textNode(caseField.getLabel())));
     }
 
 }

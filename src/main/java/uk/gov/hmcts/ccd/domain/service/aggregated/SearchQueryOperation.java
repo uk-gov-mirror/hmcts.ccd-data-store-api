@@ -96,14 +96,36 @@ public class SearchQueryOperation {
                 return uiDefinitionRepository.getWorkBasketResult(caseTypeId);
             case SEARCH:
                 return uiDefinitionRepository.getSearchResult(caseTypeId);
-            case ORG_CASES: // TODO: Need new endpoint for this
-                return uiDefinitionRepository.getWorkBasketResult(caseTypeId);
-            default: // TODO: Return all case fields
-                return uiDefinitionRepository.getWorkBasketResult(caseTypeId);
+            case ORG_CASES:
+                return uiDefinitionRepository.getSearchCasesResult(caseTypeId, useCase);
+            default:
+                return buildSearchResultFromCaseFields(caseTypeDefinition);
         }
     }
 
-    public void addSortOrderFields(MetaData metadata,SearchResult searchResult) {
+    public List<SortOrderField> getSortOrders(CaseTypeDefinition caseType, UseCase useCase) {
+        final SearchResult searchResult = getSearchResultDefinition(caseType, useCase);
+        return getSortOrders(searchResult);
+    }
+
+    private SearchResult buildSearchResultFromCaseFields(final CaseTypeDefinition caseTypeDefinition) {
+        SearchResult searchResult = new SearchResult();
+        List<SearchResultField> searchResultFields = new ArrayList<>();
+
+        caseTypeDefinition.getCaseFieldDefinitions().forEach(field -> {
+            SearchResultField searchResultField = new SearchResultField();
+            searchResultField.setCaseFieldId(field.getId());
+            searchResultField.setCaseTypeId(field.getCaseTypeId());
+            searchResultField.setLabel(field.getLabel());
+            searchResultField.setMetadata(field.isMetadata());
+            searchResultFields.add(searchResultField);
+        });
+
+        searchResult.setFields(searchResultFields.toArray(new SearchResultField[0]));
+        return searchResult;
+    }
+
+    private void addSortOrderFields(MetaData metadata,SearchResult searchResult) {
         List<SortOrderField> sortOrders = getSortOrders(searchResult);
         metadata.setSortOrderFields(sortOrders);
     }
@@ -115,11 +137,6 @@ public class SearchQueryOperation {
             .sorted(Comparator.comparing(srf -> srf.getSortOrder().getPriority()))
             .map(this::toSortOrderField)
             .collect(Collectors.toList());
-    }
-
-    public List<SortOrderField> getSortOrders(CaseTypeDefinition caseType, UseCase useCase) {
-        final SearchResult searchResult = getSearchResultDefinition(caseType, useCase);
-        return getSortOrders(searchResult);
     }
 
     private boolean hasSortField(SearchResultField searchResultField) {

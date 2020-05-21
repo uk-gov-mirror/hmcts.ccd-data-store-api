@@ -2,13 +2,19 @@ package uk.gov.hmcts.ccd.domain.model.definition;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.databind.node.TextNode;
 import lombok.ToString;
 import uk.gov.hmcts.ccd.data.casedetails.SecurityClassification;
 
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
+
+import static com.fasterxml.jackson.databind.node.JsonNodeFactory.instance;
+import static uk.gov.hmcts.ccd.domain.model.definition.FieldTypeDefinition.LABEL;
 
 @ToString
 public class CaseTypeDefinition implements Serializable {
@@ -167,5 +173,13 @@ public class CaseTypeDefinition implements Serializable {
     @JsonIgnore
     public Optional<CaseFieldDefinition> getCaseField(String caseFieldId) {
         return caseFieldDefinitions.stream().filter(caseField -> caseField.getId().equalsIgnoreCase(caseFieldId)).findFirst();
+    }
+
+    @JsonIgnore
+    public Map<String, TextNode> getLabelsFromCaseFields() {
+        return getCaseFieldDefinitions()
+            .stream()
+            .filter(caseField -> LABEL.equals(caseField.getFieldTypeDefinition().getType()))
+            .collect(Collectors.toMap(CaseFieldDefinition::getId, caseField -> instance.textNode(caseField.getLabel())));
     }
 }
