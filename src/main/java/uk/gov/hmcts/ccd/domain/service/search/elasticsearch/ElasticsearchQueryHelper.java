@@ -11,9 +11,13 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
 import uk.gov.hmcts.ccd.ApplicationParams;
+import uk.gov.hmcts.ccd.ElasticsearchMappingsConfiguration;
+import uk.gov.hmcts.ccd.data.casedetails.search.MetaData;
 import uk.gov.hmcts.ccd.data.casedetails.search.SortOrderField;
 import uk.gov.hmcts.ccd.data.user.UserService;
+import uk.gov.hmcts.ccd.domain.model.aggregated.CommonField;
 import uk.gov.hmcts.ccd.domain.model.definition.CaseTypeDefinition;
+import uk.gov.hmcts.ccd.domain.model.definition.FieldTypeDefinition;
 import uk.gov.hmcts.ccd.domain.model.search.UseCase;
 import uk.gov.hmcts.ccd.domain.service.aggregated.AuthorisedGetCaseTypeOperation;
 import uk.gov.hmcts.ccd.domain.service.aggregated.GetCaseTypeOperation;
@@ -41,6 +45,7 @@ public class ElasticsearchQueryHelper {
     private final SearchQueryOperation searchQueryOperation;
     private final GetCaseTypeOperation getCaseTypeOperation;
     private final UserService userService;
+    private final ElasticsearchMappingsConfiguration elasticsearchMappingsConfiguration;
 
     @Autowired
     public ElasticsearchQueryHelper(@Qualifier("DefaultObjectMapper") ObjectMapper objectMapper,
@@ -48,13 +53,15 @@ public class ElasticsearchQueryHelper {
                                     ObjectMapperService objectMapperService,
                                     SearchQueryOperation searchQueryOperation,
                                     @Qualifier(AuthorisedGetCaseTypeOperation.QUALIFIER) GetCaseTypeOperation getCaseTypeOperation,
-                                    UserService userService) {
+                                    UserService userService,
+                                    ElasticsearchMappingsConfiguration elasticsearchMappingsConfiguration) {
         this.objectMapper = objectMapper;
         this.applicationParams = applicationParams;
         this.objectMapperService = objectMapperService;
         this.searchQueryOperation = searchQueryOperation;
         this.getCaseTypeOperation = getCaseTypeOperation;
         this.userService = userService;
+        this.elasticsearchMappingsConfiguration = elasticsearchMappingsConfiguration;
     }
 
     public CrossCaseTypeSearchRequest prepareRequest(List<String> caseTypeIds, String useCaseString, String jsonSearchRequest) {
@@ -96,18 +103,36 @@ public class ElasticsearchQueryHelper {
         Optional<CaseTypeDefinition> caseTypeOpt = getCaseTypeOperation.execute(caseTypeId, CAN_READ);
         caseTypeOpt.ifPresent(caseType -> {
             searchQueryOperation.getSortOrders(caseType, useCase).forEach(field -> {
-                ObjectNode sortOrderFieldNode = buildSortOrderFieldNode(field);
+                ObjectNode sortOrderFieldNode = buildSortOrderFieldNode(caseType, field);
                 sortNode.add(sortOrderFieldNode);
             });
         });
     }
 
-    private ObjectNode buildSortOrderFieldNode(SortOrderField field) {
+    private ObjectNode buildSortOrderFieldNode(CaseTypeDefinition caseTypeDefinition, SortOrderField sortOrderField) {
         ObjectNode objectNode = objectMapper.createObjectNode();
-        // TODO: Handle metadata sorts and fields without keyword
-        // TODO: If alias, then use _keyword instead of .keyword
-        // TODO: If text, add keyword, otherwise ignore
-        objectNode.set("data." + field.getCaseFieldId() + ".keyword", new TextNode(field.getDirection()));
+        final CommonField commonField = caseTypeDefinition.getCommonFieldByPath(sortOrderField.getCaseFieldId()).orElseThrow(() ->
+            new NullPointerException(String.format("Field '%s' does not exist in configuration", sortOrderField.getCaseFieldId()))
+        );
+        final FieldTypeDefinition fieldType = commonField.getFieldTypeDefinition();
+
+        StringBuilder sb = new StringBuilder();
+
+        if (sortOrderField.isMetadata()) {
+            sb.append(MetaData.CaseField.valueOfReference(sortOrderField.getCaseFieldId()).getDbColumnName());
+        } else {
+            sb.append("data." + sortOrderField.getCaseFieldId());
+            if (fieldType.getType().equals(FieldTypeDefinition.COLLECTION)) {
+                sb.append(".value");
+            }
+        }
+
+        if ((sortOrderField.isMetadata() && elasticsearchMappingsConfiguration.isDefaultTextMetadata(sb.toString()))
+             || (!sortOrderField.isMetadata() && elasticsearchMappingsConfiguration.isDefaultTextCaseData(fieldType))) {
+            sb.append(".keyword");
+        }
+
+        objectNode.set(sb.toString(), new TextNode(sortOrderField.getDirection()));
         return objectNode;
     }
 

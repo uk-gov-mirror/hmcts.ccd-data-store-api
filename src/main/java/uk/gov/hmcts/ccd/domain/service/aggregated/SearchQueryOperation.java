@@ -125,7 +125,7 @@ public class SearchQueryOperation {
         return searchResult;
     }
 
-    private void addSortOrderFields(MetaData metadata,SearchResult searchResult) {
+    private void addSortOrderFields(MetaData metadata, SearchResult searchResult) {
         List<SortOrderField> sortOrders = getSortOrders(searchResult);
         metadata.setSortOrderFields(sortOrders);
     }

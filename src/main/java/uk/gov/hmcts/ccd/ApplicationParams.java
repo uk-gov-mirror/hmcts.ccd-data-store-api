@@ -191,7 +191,7 @@ public class ApplicationParams {
     }
 
     public String displaySearchCasesResultDefURL(final String caseTypeId, final UseCase useCase) {
-        // TODO: Add use case to URL (when known how to pass - TBC)
+        // TODO: Add use case to request when request param is available
         return uiDefinitionHost + "/api/display/search-cases-result-fields/" + encode(caseTypeId);
     }
 
