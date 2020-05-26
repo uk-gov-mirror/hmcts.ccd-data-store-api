@@ -12,9 +12,10 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import uk.gov.hmcts.ccd.domain.service.search.elasticsearch.ElasticsearchMappings;
 
 @Configuration
-@EnableConfigurationProperties(ElasticsearchMappingsConfiguration.class)
+@EnableConfigurationProperties(ElasticsearchMappings.class)
 public class ElasticSearchConfiguration {
 
     private final ApplicationParams applicationParams;

@@ -99,13 +99,13 @@ public class SearchQueryOperation {
             case ORG_CASES:
                 return uiDefinitionRepository.getSearchCasesResult(caseTypeId, useCase);
             default:
+                // TODO: Only requested fields
                 return buildSearchResultFromCaseFields(caseTypeDefinition);
         }
     }
 
     public List<SortOrderField> getSortOrders(CaseTypeDefinition caseType, UseCase useCase) {
-        final SearchResult searchResult = getSearchResultDefinition(caseType, useCase);
-        return getSortOrders(searchResult);
+        return getSortOrders(getSearchResultDefinition(caseType, useCase));
     }
 
     private SearchResult buildSearchResultFromCaseFields(final CaseTypeDefinition caseTypeDefinition) {

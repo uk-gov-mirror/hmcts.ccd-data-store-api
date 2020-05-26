@@ -1,4 +1,4 @@
-package uk.gov.hmcts.ccd;
+package uk.gov.hmcts.ccd.domain.service.search.elasticsearch;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -12,7 +12,7 @@ import java.util.List;
 @ConfigurationProperties("elasticsearch")
 @AllArgsConstructor
 @Getter
-public class ElasticsearchMappingsConfiguration {
+public class ElasticsearchMappings {
 
     private final TypeMappings typeMappings;
     private final CasePredefinedMappings casePredefinedMappings;
