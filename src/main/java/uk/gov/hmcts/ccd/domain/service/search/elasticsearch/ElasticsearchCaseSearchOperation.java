@@ -64,7 +64,7 @@ public class ElasticsearchCaseSearchOperation implements CaseSearchOperation {
     }
 
     @Override
-    public CaseSearchResult execute(CrossCaseTypeSearchRequest request) {
+    public CaseSearchResult executeExternal(CrossCaseTypeSearchRequest request) {
         MultiSearchResult result = search(request);
         if (result.isSucceeded()) {
             return toCaseDetailsSearchResult(result);
@@ -74,7 +74,7 @@ public class ElasticsearchCaseSearchOperation implements CaseSearchOperation {
     }
 
     @Override
-    public UICaseSearchResult execute(CaseSearchResult caseSearchResult, List<String> caseTypeIds, UseCase useCase) {
+    public UICaseSearchResult executeInternal(CaseSearchResult caseSearchResult, List<String> caseTypeIds, UseCase useCase) {
         return mergeDataToSearchCasesOperation.execute(caseTypeIds, caseSearchResult, useCase);
     }
 

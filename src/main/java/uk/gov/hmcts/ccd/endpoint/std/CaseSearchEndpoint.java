@@ -70,7 +70,7 @@ public class CaseSearchEndpoint {
             jsonSearchRequest
         );
 
-        CaseSearchResult result = caseSearchOperation.execute(request);
+        CaseSearchResult result = caseSearchOperation.executeExternal(request);
 
         Duration between = Duration.between(start, Instant.now());
         log.debug("searchCases execution completed in {} millisecs...", between.toMillis());

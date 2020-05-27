@@ -77,26 +77,26 @@ public class MergeDataToSearchCasesOperation {
         final SearchResult searchResult = searchQueryOperation.getSearchResultDefinition(caseType, useCase);
         return new UICaseSearchHeader(
             new UICaseSearchHeaderMetadata(caseType.getJurisdictionId(), caseTypeId),
-            buildSearchResultViewColumn(caseType, searchResult),
+            buildSearchResultViewColumns(caseType, searchResult),
             caseSearchResult.buildCaseReferenceList(caseTypeId)
         );
     }
 
-    private List<SearchResultViewColumn> buildSearchResultViewColumn(final CaseTypeDefinition caseTypeDefinition,
-                                                                     final SearchResult searchResult) {
+    private List<SearchResultViewColumn> buildSearchResultViewColumns(final CaseTypeDefinition caseTypeDefinition,
+                                                                      final SearchResult searchResult) {
         final HashSet<String> addedFields = new HashSet<>();
 
         return Arrays.stream(searchResult.getFields())
             .flatMap(searchResultField -> caseTypeDefinition.getCaseFieldDefinitions().stream()
                 .filter(caseField -> caseField.getId().equals(searchResultField.getCaseFieldId()))
                 .filter(caseField -> filterDistinctFieldsByRole(addedFields, searchResultField))
-                .map(caseField -> createSearchResultViewColumn(searchResultField, caseField))
+                .map(caseField -> buildSearchResultViewColumn(searchResultField, caseField))
             )
             .collect(Collectors.toList());
     }
 
-    private SearchResultViewColumn createSearchResultViewColumn(final SearchResultField searchResultField,
-                                                                final CaseFieldDefinition caseFieldDefinition) {
+    private SearchResultViewColumn buildSearchResultViewColumn(final SearchResultField searchResultField,
+                                                               final CaseFieldDefinition caseFieldDefinition) {
         CommonField commonField = commonField(searchResultField, caseFieldDefinition);
         return new SearchResultViewColumn(
             searchResultField.buildCaseFieldId(),

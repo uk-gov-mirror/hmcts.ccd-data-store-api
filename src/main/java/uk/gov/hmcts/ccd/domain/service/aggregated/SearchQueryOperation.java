@@ -67,7 +67,8 @@ public class SearchQueryOperation {
             return new SearchResultView(Collections.emptyList(), Collections.emptyList(), NO_ERROR);
         }
 
-        final SearchResult searchResult = getSearchResultDefinition(caseType.get(), view == null ? UseCase.SEARCH : UseCase.WORKBASKET);
+        final SearchResult searchResult = getSearchResultDefinition(caseType.get(),
+            view == null ? UseCase.SEARCH : UseCase.valueOfReference(view));
 
         addSortOrderFields(metadata, searchResult);
 

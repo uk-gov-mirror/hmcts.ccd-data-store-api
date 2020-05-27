@@ -1,17 +1,17 @@
 package uk.gov.hmcts.ccd.domain.service.search.elasticsearch;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Collections;
+import java.util.List;
 
 import static com.google.common.collect.Lists.newArrayList;
 import static java.util.Arrays.asList;
-import static java.util.Collections.singletonList;
 import static org.hamcrest.core.IsEqual.equalTo;
 import static org.junit.Assert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.BDDMockito.given;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Matchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
@@ -20,7 +20,7 @@ import static org.mockito.Mockito.when;
 import static uk.gov.hmcts.ccd.domain.service.search.elasticsearch.CaseSearchRequest.QUERY;
 import static uk.gov.hmcts.ccd.domain.service.search.elasticsearch.ElasticsearchCaseSearchOperation.MULTI_SEARCH_ERROR_MSG_ROOT_CAUSE;
 
-import com.fasterxml.jackson.databind.*;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.google.gson.JsonElement;
@@ -29,7 +29,6 @@ import io.searchbox.client.JestClient;
 import io.searchbox.core.MultiSearch;
 import io.searchbox.core.MultiSearchResult;
 import io.searchbox.core.SearchResult;
-import org.junit.*;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -41,7 +40,9 @@ import org.powermock.reflect.Whitebox;
 import uk.gov.hmcts.ccd.ApplicationParams;
 import uk.gov.hmcts.ccd.domain.model.definition.CaseDetails;
 import uk.gov.hmcts.ccd.domain.model.search.CaseSearchResult;
-import uk.gov.hmcts.ccd.domain.service.common.*;
+import uk.gov.hmcts.ccd.domain.model.search.UseCase;
+import uk.gov.hmcts.ccd.domain.model.search.elasticsearch.UICaseSearchResult;
+import uk.gov.hmcts.ccd.domain.service.aggregated.MergeDataToSearchCasesOperation;
 import uk.gov.hmcts.ccd.domain.service.search.elasticsearch.dto.ElasticSearchCaseDetailsDTO;
 import uk.gov.hmcts.ccd.domain.service.search.elasticsearch.mapper.CaseDetailsMapper;
 import uk.gov.hmcts.ccd.domain.service.search.elasticsearch.security.CaseSearchRequestSecurity;
@@ -54,7 +55,6 @@ class ElasticsearchCaseSearchOperationTest {
     private static final String CASE_TYPE_ID_2 = "casetypeid2";
     private static final String INDEX_TYPE = "case";
     private final String caseDetailsElastic = "{some case details}";
-    private static final String QUERY_STRING = "{\"query\":{}}";
 
     @InjectMocks
     private ElasticsearchCaseSearchOperation searchOperation;
@@ -81,20 +81,16 @@ class ElasticsearchCaseSearchOperationTest {
     private ObjectMapper objectMapper;
 
     @Mock
-    private ObjectMapperService objectMapperService;
-
-    private ObjectMapper objectMapperES = new ObjectMapper();
+    private MergeDataToSearchCasesOperation mergeDataToSearchCasesOperation;
 
     private final ObjectNode searchRequestJsonNode = JsonNodeFactory.instance.objectNode();
 
     @BeforeEach
-    void setUp() throws IOException {
+    void setUp() {
         MockitoAnnotations.initMocks(this);
         when(applicationParams.getCasesIndexNameFormat()).thenReturn(INDEX_NAME_FORMAT);
         when(applicationParams.getCasesIndexType()).thenReturn(INDEX_TYPE);
         searchRequestJsonNode.set(QUERY, mock(ObjectNode.class));
-        when(objectMapperService.convertStringToObject(anyString(), any())).thenReturn(objectMapperES.readValue(QUERY_STRING, ObjectNode.class));
-
     }
 
     @Nested
@@ -124,7 +120,7 @@ class ElasticsearchCaseSearchOperationTest {
                 .build();
             when(caseSearchRequestSecurity.createSecuredSearchRequest(any(CaseSearchRequest.class))).thenReturn(request);
 
-            CaseSearchResult caseSearchResult = searchOperation.execute(crossCaseTypeSearchRequest);
+            CaseSearchResult caseSearchResult = searchOperation.executeExternal(crossCaseTypeSearchRequest);
 
             assertAll(
                 () -> assertThat(caseSearchResult.getCases(), equalTo(newArrayList(caseDetails))),
@@ -172,7 +168,7 @@ class ElasticsearchCaseSearchOperationTest {
                 .build();
             when(caseSearchRequestSecurity.createSecuredSearchRequest(any(CaseSearchRequest.class))).thenReturn(request1, request2);
 
-            CaseSearchResult caseSearchResult = searchOperation.execute(crossCaseTypeSearchRequest);
+            CaseSearchResult caseSearchResult = searchOperation.executeExternal(crossCaseTypeSearchRequest);
 
             assertAll(
                 () -> assertThat(caseSearchResult.getCases(), equalTo(newArrayList(caseDetails, caseDetails))),
@@ -183,6 +179,23 @@ class ElasticsearchCaseSearchOperationTest {
                 () -> verify(caseSearchRequestSecurity, times(2)).createSecuredSearchRequest(any(CaseSearchRequest.class)));
         }
 
+    }
+
+    @Nested
+    @DisplayName("Internal search")
+    class InternalSearch {
+
+        @Test
+        @DisplayName("should call converter to UICaseSearchResult")
+        void shouldConvertToInternalSearchResult() throws IOException {
+            CaseSearchResult caseSearchResult = new CaseSearchResult();
+            List<String> caseTypeIds = new ArrayList<>();
+            UseCase useCase = UseCase.WORKBASKET;
+
+            final UICaseSearchResult result = searchOperation.executeInternal(caseSearchResult, caseTypeIds, useCase);
+
+            verify(mergeDataToSearchCasesOperation).execute(eq(caseTypeIds), eq(caseSearchResult), eq(useCase));
+        }
     }
 
     @Nested
@@ -202,7 +215,7 @@ class ElasticsearchCaseSearchOperationTest {
                 .build();
             when(caseSearchRequestSecurity.createSecuredSearchRequest(any(CaseSearchRequest.class))).thenReturn(request);
 
-            assertThrows(BadSearchRequest.class, () -> searchOperation.execute(crossCaseTypeSearchRequest));
+            assertThrows(BadSearchRequest.class, () -> searchOperation.executeExternal(crossCaseTypeSearchRequest));
         }
 
         @Test
@@ -227,64 +240,9 @@ class ElasticsearchCaseSearchOperationTest {
                 .build();
             when(caseSearchRequestSecurity.createSecuredSearchRequest(any(CaseSearchRequest.class))).thenReturn(request);
 
-            assertThrows(BadSearchRequest.class, () -> searchOperation.execute(crossCaseTypeSearchRequest));
+            assertThrows(BadSearchRequest.class, () -> searchOperation.executeExternal(crossCaseTypeSearchRequest));
         }
 
-    }
-
-    @Test
-    void searchCaseDetailsAllowsQueriesNotBlacklisted() {
-        String query = "{\n"
-            + "   \"query\":{\n"
-            + "      \"bool\":{\n"
-            + "         \"must\":[\n"
-            + "            {\n"
-            + "               \"simple_query_string\":{\n"
-            + "                  \"query\":\"isde~2\"\n"
-            + "               }\n"
-            + "            },\n"
-            + "            {\n"
-            + "               \"range\":{\n"
-            + "                  \"data.ComplexField.ComplexNestedField.NestedNumberField\":{\n"
-            + "                     \"lt\":\"91\"\n"
-            + "                  }\n"
-            + "               }\n"
-            + "            }\n"
-            + "         ]\n"
-            + "      }\n"
-            + "   }\n"
-            + "}";
-        given(applicationParams.getSearchBlackList()).willReturn(newArrayList("query_string"));
-
-        searchOperation.rejectBlackListedQuery(query);
-    }
-
-    @Test
-    void stringToJsonNode() throws IOException {
-        String query = "{\n"
-            + "   \"query\":{\n"
-            + "      \"bool\":{\n"
-            + "         \"must\":[\n"
-            + "            {\n"
-            + "               \"simple_query_string\":{\n"
-            + "                  \"query\":\"isde~2\"\n"
-            + "               }\n"
-            + "            },\n"
-            + "            {\n"
-            + "               \"range\":{\n"
-            + "                  \"data.ComplexField.ComplexNestedField.NestedNumberField\":{\n"
-            + "                     \"lt\":\"91\"\n"
-            + "                  }\n"
-            + "               }\n"
-            + "            }\n"
-            + "         ]\n"
-            + "      }\n"
-            + "   }\n"
-            + "}";
-        when(objectMapperService.convertStringToObject(query, JsonNode.class)).thenReturn(objectMapperES.readValue(query, ObjectNode.class));
-
-        JsonNode response = searchOperation.stringToJsonNode(query);
-        Assert.assertEquals(response, objectMapperES.readTree(query));
     }
 
 }

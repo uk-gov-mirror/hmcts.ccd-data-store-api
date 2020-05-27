@@ -31,6 +31,8 @@ public class CaseSearchResult {
     }
 
     public List<String> buildCaseReferenceList(String caseTypeId) {
-        return cases.stream().filter(c -> c.getCaseTypeId().equals(caseTypeId)).map(CaseDetails::getReferenceAsString).collect(toList());
+        return cases == null
+            ? emptyList()
+            : cases.stream().filter(c -> c.getCaseTypeId().equals(caseTypeId)).map(CaseDetails::getReferenceAsString).collect(toList());
     }
 }

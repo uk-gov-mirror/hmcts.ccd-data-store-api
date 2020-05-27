@@ -2,6 +2,8 @@ package uk.gov.hmcts.ccd.domain.model.search;
 
 import com.google.common.base.Strings;
 
+import java.util.Arrays;
+
 public enum UseCase {
 
     WORKBASKET("WORKBASKET"),
@@ -23,6 +25,9 @@ public enum UseCase {
         if (Strings.isNullOrEmpty(reference)) {
             return DEFAULT;
         }
-        return valueOf(reference);
+        return Arrays.stream(UseCase.values())
+            .filter(useCase -> useCase.getReference().equals(reference))
+            .findAny()
+            .orElseThrow(() -> new IllegalArgumentException(String.format("Use case reference '%s' is not a known value.", reference)));
     }
 }

@@ -71,7 +71,7 @@ public class AuthorisedCaseSearchOperation implements CaseSearchOperation {
     }
 
     @Override
-    public CaseSearchResult execute(CrossCaseTypeSearchRequest searchRequest) {
+    public CaseSearchResult executeExternal(CrossCaseTypeSearchRequest searchRequest) {
         List<CaseTypeDefinition> authorisedCaseTypes = getAuthorisedCaseTypes(searchRequest.getCaseTypeIds());
         CrossCaseTypeSearchRequest authorisedSearchRequest = createAuthorisedSearchRequest(authorisedCaseTypes, searchRequest);
 
@@ -79,9 +79,9 @@ public class AuthorisedCaseSearchOperation implements CaseSearchOperation {
     }
 
     @Override
-    public UICaseSearchResult execute(CaseSearchResult caseSearchResult,
-                                      List<String> caseTypeIds,
-                                      UseCase useCase) {
+    public UICaseSearchResult executeInternal(CaseSearchResult caseSearchResult,
+                                              List<String> caseTypeIds,
+                                              UseCase useCase) {
         List<String> authorisedCaseTypeIds = getAuthorisedCaseTypes(caseTypeIds)
             .stream()
             .map(CaseTypeDefinition::getId)
@@ -99,11 +99,10 @@ public class AuthorisedCaseSearchOperation implements CaseSearchOperation {
     }
 
     private List<String> caseTypesFor(List<String> originalCaseTypeIds) {
-        if (CollectionUtils.isEmpty(originalCaseTypeIds)) {
-            return userService.getUserCaseTypes().stream().map(CaseTypeDefinition::getId).collect(Collectors.toList());
-        } else {
-            return originalCaseTypeIds;
-        }
+        return CollectionUtils.isEmpty(originalCaseTypeIds)
+            ? userService.getUserCaseTypes().stream().map(CaseTypeDefinition::getId).collect(Collectors.toList())
+            : originalCaseTypeIds;
+
     }
 
     private CrossCaseTypeSearchRequest createAuthorisedSearchRequest(List<CaseTypeDefinition> authorisedCaseTypes,
@@ -124,7 +123,7 @@ public class AuthorisedCaseSearchOperation implements CaseSearchOperation {
             return CaseSearchResult.EMPTY;
         }
 
-        CaseSearchResult result = caseSearchOperation.execute(authorisedSearchRequest);
+        CaseSearchResult result = caseSearchOperation.executeExternal(authorisedSearchRequest);
         filterCaseDataByCaseType(authorisedCaseTypes, result.getCases(), authorisedSearchRequest);
 
         return result;
@@ -134,7 +133,7 @@ public class AuthorisedCaseSearchOperation implements CaseSearchOperation {
                                             List<String> caseTypeIds,
                                             UseCase useCase) {
         // TODO: Filter out fields from result that haven't been requested before returning (RDM-8556)
-        return caseSearchOperation.execute(caseSearchResult, caseTypeIds, useCase);
+        return caseSearchOperation.executeInternal(caseSearchResult, caseTypeIds, useCase);
     }
 
     private void filterCaseDataByCaseType(List<CaseTypeDefinition> authorisedCaseTypes,

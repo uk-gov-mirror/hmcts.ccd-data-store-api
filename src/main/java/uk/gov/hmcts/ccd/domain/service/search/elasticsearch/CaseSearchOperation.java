@@ -8,9 +8,9 @@ import java.util.List;
 
 public interface CaseSearchOperation {
 
-    CaseSearchResult execute(CrossCaseTypeSearchRequest request);
+    CaseSearchResult executeExternal(CrossCaseTypeSearchRequest request);
 
-    UICaseSearchResult execute(CaseSearchResult caseSearchResult,
-                               List<String> caseTypeIds,
-                               UseCase useCase);
+    UICaseSearchResult executeInternal(CaseSearchResult caseSearchResult,
+                                       List<String> caseTypeIds,
+                                       UseCase useCase);
 }

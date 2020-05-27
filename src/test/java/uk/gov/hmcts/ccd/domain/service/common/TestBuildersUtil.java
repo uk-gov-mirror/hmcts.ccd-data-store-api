@@ -1112,6 +1112,16 @@ public class TestBuildersUtil {
             return this;
         }
 
+        public CaseFieldBuilder withMetadata(final boolean asMetadata) {
+            caseFieldDefinition.setMetadata(asMetadata);
+            return this;
+        }
+
+        public CaseFieldBuilder withCaseTypeId(final String caseTypeId) {
+            caseFieldDefinition.setCaseTypeId(caseTypeId);
+            return this;
+        }
+
         public CaseFieldDefinition build() {
             caseFieldDefinition.setAccessControlLists(accessControlLists);
             caseFieldDefinition.setComplexACLs(complexACLs);

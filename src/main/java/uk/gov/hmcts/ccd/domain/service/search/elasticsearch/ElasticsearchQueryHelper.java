@@ -76,13 +76,15 @@ public class ElasticsearchQueryHelper {
 
         rejectBlackListedQuery(jsonSearchRequest);
 
+        final List<String> updatedCaseTypeIds = buildCaseTypeIds(caseTypeIds);
+
         JsonNode searchRequest = stringToJsonNode(jsonSearchRequest);
         if (useCase != UseCase.DEFAULT) {
-            applyConfiguredSort(searchRequest, caseTypeIds, useCase);
+            applyConfiguredSort(searchRequest, updatedCaseTypeIds, useCase);
         }
 
         return new CrossCaseTypeSearchRequest.Builder()
-            .withCaseTypes(buildCaseTypeIds(caseTypeIds))
+            .withCaseTypes(updatedCaseTypeIds)
             .withSearchRequest(searchRequest)
             .build();
     }
@@ -91,7 +93,9 @@ public class ElasticsearchQueryHelper {
         JsonNode sortNode = searchRequest.get(SORT);
         if (sortNode == null) {
             ArrayNode appliedSortsNode = buildSortNode(caseTypeIds, useCase);
-            ((ObjectNode)searchRequest).set(SORT, appliedSortsNode);
+            if (appliedSortsNode.size() > 0) {
+                ((ObjectNode)searchRequest).set(SORT, appliedSortsNode);
+            }
         }
     }
 
@@ -103,16 +107,15 @@ public class ElasticsearchQueryHelper {
 
     private void addCaseTypeSorts(String caseTypeId, UseCase useCase, ArrayNode sortNode) {
         Optional<CaseTypeDefinition> caseTypeOpt = getCaseTypeOperation.execute(caseTypeId, CAN_READ);
-        caseTypeOpt.ifPresent(caseType -> {
-            searchQueryOperation.getSortOrders(caseType, useCase)
-                .forEach(field -> sortNode.add(buildSortOrderFieldNode(caseType, field)));
-        });
+        caseTypeOpt.ifPresent(caseType -> searchQueryOperation.getSortOrders(caseType, useCase)
+            .forEach(field -> sortNode.add(buildSortOrderFieldNode(caseType, field))));
     }
 
     private ObjectNode buildSortOrderFieldNode(CaseTypeDefinition caseTypeDefinition, SortOrderField sortOrderField) {
         ObjectNode objectNode = objectMapper.createObjectNode();
         final CommonField commonField = caseTypeDefinition.getCommonFieldByPath(sortOrderField.getCaseFieldId()).orElseThrow(() ->
-            new NullPointerException(String.format("Field '%s' does not exist in configuration", sortOrderField.getCaseFieldId()))
+            new NullPointerException(String.format("Case field '%s' does not exist in configuration for case type '%s'.",
+                sortOrderField.getCaseFieldId(), caseTypeDefinition.getId()))
         );
         final FieldTypeDefinition fieldType = commonField.getFieldTypeDefinition();
 
