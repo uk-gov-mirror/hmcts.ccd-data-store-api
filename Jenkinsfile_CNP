@@ -99,6 +99,11 @@ withPipeline(type, product, component) {
         steps.archiveArtifacts allowEmptyArchive: true, artifacts: '**/target/cucumber/**/*'
     }
 
+
+
+ajndijabdiab
+aadmahbdapydval d
+opajd;ouabdaiygda
     after('functionalTest:aat') {
         steps.archiveArtifacts allowEmptyArchive: true, artifacts: '**/target/cucumber/**/*'
     }
