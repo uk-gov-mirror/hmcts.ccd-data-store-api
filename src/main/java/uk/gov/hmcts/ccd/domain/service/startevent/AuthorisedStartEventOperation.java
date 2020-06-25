@@ -1,19 +1,9 @@
 package uk.gov.hmcts.ccd.domain.service.startevent;
 
-import java.util.Collections;
-
-import java.util.HashMap;
-import java.util.Set;
-
-import static com.google.common.collect.Maps.newHashMap;
-import static uk.gov.hmcts.ccd.domain.service.common.AccessControlService.CAN_READ;
-
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.Sets;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
+import uk.gov.hmcts.ccd.config.JacksonUtils;
 import uk.gov.hmcts.ccd.data.casedetails.CachedCaseDetailsRepository;
 import uk.gov.hmcts.ccd.data.casedetails.CaseDetailsRepository;
 import uk.gov.hmcts.ccd.data.definition.CachedCaseDefinitionRepository;
@@ -31,13 +21,14 @@ import uk.gov.hmcts.ccd.domain.service.getcase.CaseNotFoundException;
 import uk.gov.hmcts.ccd.endpoint.exceptions.BadRequestException;
 import uk.gov.hmcts.ccd.endpoint.exceptions.ValidationException;
 
+import java.util.Set;
+
+import static com.google.common.collect.Maps.newHashMap;
+import static uk.gov.hmcts.ccd.domain.service.common.AccessControlService.CAN_READ;
+
 @Service
 @Qualifier("authorised")
 public class AuthorisedStartEventOperation implements StartEventOperation {
-
-    private static final ObjectMapper MAPPER = new ObjectMapper();
-    private static final TypeReference STRING_JSON_MAP = new TypeReference<HashMap<String, JsonNode>>() {
-    };
 
     private final StartEventOperation startEventOperation;
     private final CaseDefinitionRepository caseDefinitionRepository;
@@ -67,8 +58,8 @@ public class AuthorisedStartEventOperation implements StartEventOperation {
     @Override
     public StartEventTrigger triggerStartForCaseType(String caseTypeId, String eventTriggerId, Boolean ignoreWarning) {
         return verifyReadAccess(caseTypeId, startEventOperation.triggerStartForCaseType(caseTypeId,
-                                                                                        eventTriggerId,
-                                                                                        ignoreWarning));
+            eventTriggerId,
+            ignoreWarning));
     }
 
     @Override
@@ -80,8 +71,8 @@ public class AuthorisedStartEventOperation implements StartEventOperation {
 
         return caseDetailsRepository.findByReference(caseReference)
             .map(caseDetails -> verifyReadAccess(caseDetails.getCaseTypeId(), startEventOperation.triggerStartForCase(caseReference,
-                                                                                                                      eventTriggerId,
-                                                                                                                      ignoreWarning)))
+                eventTriggerId,
+                ignoreWarning)))
             .orElseThrow(() -> new CaseNotFoundException(caseReference));
     }
 
@@ -91,7 +82,7 @@ public class AuthorisedStartEventOperation implements StartEventOperation {
 
         final CaseDetails caseDetails = draftGateway.getCaseDetails(Draft.stripId(draftReference));
         return verifyReadAccess(caseDetails.getCaseTypeId(), startEventOperation.triggerStartForDraft(draftReference,
-                                                                                                      ignoreWarning));
+            ignoreWarning));
     }
 
     private CaseType getCaseType(String caseTypeId) {
@@ -104,12 +95,11 @@ public class AuthorisedStartEventOperation implements StartEventOperation {
 
     private Set<String> getCaseRoles(CaseDetails caseDetails) {
         if (caseDetails == null || caseDetails.getId() == null || Draft.isDraft(caseDetails.getId())) {
-            return Collections.emptySet();
+            return caseAccessService.getCaseCreationCaseRoles();
         } else {
             return caseAccessService.getCaseRoles(caseDetails.getId());
         }
     }
-
 
     private StartEventTrigger verifyReadAccess(final String caseTypeId, final StartEventTrigger startEventTrigger) {
 
@@ -129,22 +119,20 @@ public class AuthorisedStartEventOperation implements StartEventOperation {
         }
 
         if (caseDetails != null) {
-            caseDetails.setData(MAPPER.convertValue(
+            caseDetails.setData(JacksonUtils.convertValue(
                 accessControlService.filterCaseFieldsByAccess(
-                    MAPPER.convertValue(caseDetails.getData(), JsonNode.class),
+                    JacksonUtils.convertValueJsonNode(caseDetails.getData()),
                     caseType.getCaseFields(),
                     userRoles,
                     CAN_READ,
-                    false),
-                STRING_JSON_MAP));
-            caseDetails.setDataClassification(MAPPER.convertValue(
+                    false)));
+            caseDetails.setDataClassification(JacksonUtils.convertValue(
                 accessControlService.filterCaseFieldsByAccess(
-                    MAPPER.convertValue(caseDetails.getDataClassification(), JsonNode.class),
+                    JacksonUtils.convertValueJsonNode(caseDetails.getDataClassification()),
                     caseType.getCaseFields(),
                     userRoles,
                     CAN_READ,
-                    true),
-                STRING_JSON_MAP));
+                    true)));
         }
         return startEventTrigger;
     }

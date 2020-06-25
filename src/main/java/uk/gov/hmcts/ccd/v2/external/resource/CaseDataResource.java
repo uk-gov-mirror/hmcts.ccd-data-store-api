@@ -1,24 +1,22 @@
 package uk.gov.hmcts.ccd.v2.external.resource;
 
-import static org.springframework.hateoas.mvc.ControllerLinkBuilder.linkTo;
-import static org.springframework.hateoas.mvc.ControllerLinkBuilder.methodOn;
-
 import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 import lombok.NonNull;
-import org.springframework.hateoas.ResourceSupport;
+import org.springframework.hateoas.RepresentationModel;
+import uk.gov.hmcts.ccd.config.JacksonUtils;
 import uk.gov.hmcts.ccd.domain.model.std.CaseDataContent;
 import uk.gov.hmcts.ccd.v2.external.controller.CaseDataValidatorController;
+
+import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.linkTo;
+import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.methodOn;
 
 @Data
 @EqualsAndHashCode(callSuper = true)
 @NoArgsConstructor
-public class CaseDataResource extends ResourceSupport {
-
-    private static final ObjectMapper MAPPER = new ObjectMapper();
+public class CaseDataResource extends RepresentationModel {
 
     private JsonNode data;
 
@@ -29,6 +27,6 @@ public class CaseDataResource extends ResourceSupport {
     }
 
     private void copyProperties(CaseDataContent caseData) {
-        this.data = MAPPER.convertValue(caseData.getData().get("data"), JsonNode.class);
+        this.data = JacksonUtils.convertValueJsonNode(caseData.getData().get("data"));
     }
 }

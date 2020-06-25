@@ -13,8 +13,8 @@ import static org.hamcrest.Matchers.hasItemInArray;
 import static org.hamcrest.Matchers.hasProperty;
 import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.mockito.Mockito.doReturn;
-import static org.mockito.Mockito.verify;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.*;
 import static uk.gov.hmcts.ccd.domain.service.common.TestBuildersUtil.CaseTabCollectionBuilder.newCaseTabCollection;
 
 import com.fasterxml.jackson.databind.JsonNode;
@@ -27,12 +27,14 @@ import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 import uk.gov.hmcts.ccd.data.definition.UIDefinitionRepository;
 import uk.gov.hmcts.ccd.domain.model.aggregated.CaseHistoryView;
+import uk.gov.hmcts.ccd.domain.model.aggregated.CompoundFieldOrderService;
 import uk.gov.hmcts.ccd.domain.model.definition.*;
 import uk.gov.hmcts.ccd.domain.model.std.AuditEvent;
 import uk.gov.hmcts.ccd.domain.service.common.CaseTypeService;
 import uk.gov.hmcts.ccd.domain.service.common.UIDService;
 import uk.gov.hmcts.ccd.domain.service.getcase.GetCaseOperation;
 import uk.gov.hmcts.ccd.domain.service.getevents.GetEventsOperation;
+import uk.gov.hmcts.ccd.domain.service.processor.FieldProcessorService;
 import uk.gov.hmcts.ccd.endpoint.exceptions.BadRequestException;
 import uk.gov.hmcts.ccd.endpoint.exceptions.ResourceNotFoundException;
 
@@ -60,6 +62,12 @@ class DefaultGetCaseHistoryViewOperationTest {
 
     @Mock
     private UIDService uidService;
+
+    @Mock
+    private CompoundFieldOrderService compoundFieldOrderService;
+
+    @Mock
+    private FieldProcessorService fieldProcessorService;
 
     @InjectMocks
     private DefaultGetCaseHistoryViewOperation defaultGetCaseHistoryViewOperation;
@@ -100,6 +108,8 @@ class DefaultGetCaseHistoryViewOperationTest {
 
         CaseState caseState = new CaseState();
         doReturn(caseState).when(caseTypeService).findState(caseType, STATE);
+
+        doAnswer(invocation -> invocation.getArgument(0)).when(fieldProcessorService).processCaseViewField(any());
     }
 
     @Test

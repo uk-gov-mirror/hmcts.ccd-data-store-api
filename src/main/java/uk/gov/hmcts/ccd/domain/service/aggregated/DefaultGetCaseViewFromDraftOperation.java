@@ -7,6 +7,7 @@ import org.springframework.stereotype.Service;
 import uk.gov.hmcts.ccd.data.definition.UIDefinitionRepository;
 import uk.gov.hmcts.ccd.data.draft.CachedDraftGateway;
 import uk.gov.hmcts.ccd.data.draft.DraftGateway;
+import uk.gov.hmcts.ccd.domain.model.aggregated.CompoundFieldOrderService;
 import uk.gov.hmcts.ccd.domain.model.aggregated.CaseView;
 import uk.gov.hmcts.ccd.domain.model.aggregated.CaseViewEvent;
 import uk.gov.hmcts.ccd.domain.model.aggregated.CaseViewTrigger;
@@ -21,6 +22,7 @@ import uk.gov.hmcts.ccd.domain.service.common.ObjectMapperService;
 import uk.gov.hmcts.ccd.domain.service.common.UIDService;
 import uk.gov.hmcts.ccd.domain.service.getcase.CreatorGetCaseOperation;
 import uk.gov.hmcts.ccd.domain.service.getcase.GetCaseOperation;
+import uk.gov.hmcts.ccd.domain.service.processor.FieldProcessorService;
 
 import java.util.ArrayList;
 
@@ -51,8 +53,10 @@ public class DefaultGetCaseViewFromDraftOperation extends AbstractDefaultGetCase
                                                 final UIDService uidService,
                                                 @Qualifier(CachedDraftGateway.QUALIFIER) final DraftGateway draftGateway,
                                                 final DraftResponseToCaseDetailsBuilder draftResponseToCaseDetailsBuilder,
-                                                final ObjectMapperService objectMapperService) {
-        super(getCaseOperation, uiDefinitionRepository, caseTypeService, uidService, objectMapperService);
+                                                final ObjectMapperService objectMapperService,
+                                                final CompoundFieldOrderService compoundFieldOrderService,
+                                                final FieldProcessorService fieldProcessorService) {
+        super(getCaseOperation, uiDefinitionRepository, caseTypeService, uidService, objectMapperService, compoundFieldOrderService, fieldProcessorService);
         this.draftGateway = draftGateway;
         this.draftResponseToCaseDetailsBuilder = draftResponseToCaseDetailsBuilder;
     }

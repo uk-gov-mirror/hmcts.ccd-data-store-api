@@ -40,6 +40,7 @@ public class CaseField implements Serializable, CommonField {
     private String liveFrom = null;
     @JsonProperty("live_until")
     private String liveUntil = null;
+    private Integer order;
     @JsonProperty("show_condition")
     private String showConditon = null;
     @JsonProperty("acls")
@@ -49,6 +50,10 @@ public class CaseField implements Serializable, CommonField {
     private boolean metadata;
     @JsonProperty("display_context")
     private String displayContext;
+    @JsonProperty("display_context_parameter")
+    private String displayContextParameter;
+    @JsonProperty("formatted_value")
+    private Object formattedValue;
 
     public String getId() {
         return id;
@@ -122,6 +127,14 @@ public class CaseField implements Serializable, CommonField {
         this.liveUntil = liveUntil;
     }
 
+    public Integer getOrder() {
+        return order;
+    }
+
+    public void setOrder(final Integer order) {
+        this.order = order;
+    }
+
     public String getShowConditon() {
         return showConditon;
     }
@@ -162,6 +175,22 @@ public class CaseField implements Serializable, CommonField {
         this.displayContext = displayContext;
     }
 
+    public String getDisplayContextParameter() {
+        return displayContextParameter;
+    }
+
+    public void setDisplayContextParameter(String displayContextParameter) {
+        this.displayContextParameter = displayContextParameter;
+    }
+
+    public Object getFormattedValue() {
+        return formattedValue;
+    }
+
+    public void setFormattedValue(Object formattedValue) {
+        this.formattedValue = formattedValue;
+    }
+
     @JsonIgnore
     public void propagateACLsToNestedFields() {
         propagateACLsToNestedFields(this, this.accessControlLists);
@@ -182,7 +211,7 @@ public class CaseField implements Serializable, CommonField {
     }
 
     private void clearACLsForMissingComplexACLs() {
-        if (this.isCompound()) {
+        if (this.isCompoundFieldType()) {
             final List<String> allPaths = buildAllDottedComplexFieldPossibilities(this.getFieldType().getChildren());
             this.complexACLs.forEach(complexACL -> {
                 Optional<String> parentPath = getParentPath(complexACL.getListElementCode());
@@ -245,8 +274,8 @@ public class CaseField implements Serializable, CommonField {
         return this.accessControlLists.stream().filter(acl -> acl.getRole().equalsIgnoreCase(role)).findFirst();
     }
 
-    private static void propagateACLsToNestedFields(CaseField caseField, List<AccessControlList> acls) {
-        if (caseField.isCompound()) {
+    private static void propagateACLsToNestedFields(CommonField caseField, List<AccessControlList> acls) {
+        if (caseField.isCompoundFieldType()) {
             caseField.getFieldType().getChildren().forEach(nestedField -> {
                 final List<AccessControlList> cloneACLs = acls.stream().map(AccessControlList::duplicate).collect(toList());
                 nestedField.setAccessControlLists(cloneACLs);
@@ -287,7 +316,7 @@ public class CaseField implements Serializable, CommonField {
         });
     }
 
-    private boolean isCollection(CaseField caseField) {
+    private boolean isCollection(CommonField caseField) {
         return caseField.getFieldType().getCollectionFieldType() != null
             && caseField.getFieldType().getCollectionFieldType().getComplexFields() != null
             && !caseField.getFieldType().getCollectionFieldType().getComplexFields().isEmpty();

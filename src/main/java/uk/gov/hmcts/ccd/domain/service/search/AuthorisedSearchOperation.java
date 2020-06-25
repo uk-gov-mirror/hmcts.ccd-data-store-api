@@ -1,13 +1,11 @@
 package uk.gov.hmcts.ccd.domain.service.search;
 
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.Lists;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
 import org.springframework.util.CollectionUtils;
+import uk.gov.hmcts.ccd.config.JacksonUtils;
 import uk.gov.hmcts.ccd.data.casedetails.search.MetaData;
 import uk.gov.hmcts.ccd.data.definition.CachedCaseDefinitionRepository;
 import uk.gov.hmcts.ccd.data.definition.CaseDefinitionRepository;
@@ -17,17 +15,19 @@ import uk.gov.hmcts.ccd.domain.model.definition.CaseType;
 import uk.gov.hmcts.ccd.domain.service.common.AccessControlService;
 import uk.gov.hmcts.ccd.endpoint.exceptions.ValidationException;
 
-import java.util.*;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 import static uk.gov.hmcts.ccd.domain.service.common.AccessControlService.CAN_READ;
+import static uk.gov.hmcts.ccd.domain.service.search.AuthorisedSearchOperation.QUALIFIER;
 
 @Service
-@Qualifier("authorised")
+@Qualifier(QUALIFIER)
 public class AuthorisedSearchOperation implements SearchOperation {
-    private static final ObjectMapper MAPPER = new ObjectMapper();
-    private static final TypeReference STRING_JSON_MAP = new TypeReference<HashMap<String, JsonNode>>() {
-    };
+    public static final String QUALIFIER = "authorised";
 
     private final SearchOperation searchOperation;
     private final CaseDefinitionRepository caseDefinitionRepository;
@@ -91,22 +91,20 @@ public class AuthorisedSearchOperation implements SearchOperation {
             return Optional.empty();
         }
 
-        caseDetails.setData(MAPPER.convertValue(
+        caseDetails.setData(JacksonUtils.convertValue(
             accessControlService.filterCaseFieldsByAccess(
-                MAPPER.convertValue(caseDetails.getData(), JsonNode.class),
+                JacksonUtils.convertValueJsonNode(caseDetails.getData()),
                 caseType.getCaseFields(),
                 userRoles,
                 CAN_READ,
-                false),
-            STRING_JSON_MAP));
-        caseDetails.setDataClassification(MAPPER.convertValue(
+                false)));
+        caseDetails.setDataClassification(JacksonUtils.convertValue(
             accessControlService.filterCaseFieldsByAccess(
-                MAPPER.convertValue(caseDetails.getDataClassification(), JsonNode.class),
+                JacksonUtils.convertValueJsonNode(caseDetails.getDataClassification()),
                 caseType.getCaseFields(),
                 userRoles,
                 CAN_READ,
-                true),
-            STRING_JSON_MAP));
+                true)));
 
         return Optional.of(caseDetails);
     }

@@ -1,8 +1,5 @@
 package uk.gov.hmcts.ccd.domain.model.aggregated;
 
-import java.util.List;
-import java.util.Map;
-
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.ToString;
 import uk.gov.hmcts.ccd.domain.model.definition.AccessControlList;
@@ -10,8 +7,12 @@ import uk.gov.hmcts.ccd.domain.model.definition.CaseField;
 import uk.gov.hmcts.ccd.domain.model.definition.CaseTypeTabField;
 import uk.gov.hmcts.ccd.domain.model.definition.FieldType;
 
+import java.util.List;
+import java.util.Map;
+
 @ToString
 public class CaseViewField implements CommonField {
+
     public static final String READONLY = "READONLY";
     public static final String MANDATORY = "MANDATORY";
     public static final String OPTIONAL = "OPTIONAL";
@@ -30,6 +31,8 @@ public class CaseViewField implements CommonField {
     @JsonProperty("order")
     private Integer order;
     private Object value;
+    @JsonProperty("formatted_value")
+    private Object formattedValue;
     @JsonProperty("display_context")
     private String displayContext;
     @JsonProperty("display_context_parameter")
@@ -116,6 +119,14 @@ public class CaseViewField implements CommonField {
         this.value = value;
     }
 
+    public Object getFormattedValue() {
+        return formattedValue;
+    }
+
+    public void setFormattedValue(Object formattedValue) {
+        this.formattedValue = formattedValue;
+    }
+
     public String getDisplayContext() {
         return displayContext;
     }
@@ -155,6 +166,7 @@ public class CaseViewField implements CommonField {
     public void setDisplayContextParameter(String displayContextParameter) {
         this.displayContextParameter = displayContextParameter;
     }
+
 
     public List<AccessControlList> getAccessControlLists() {
         return accessControlLists;

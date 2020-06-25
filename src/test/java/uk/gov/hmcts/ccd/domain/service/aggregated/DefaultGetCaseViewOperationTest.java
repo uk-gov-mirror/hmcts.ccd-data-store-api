@@ -13,6 +13,7 @@ import org.mockito.Spy;
 import uk.gov.hmcts.ccd.data.casedetails.search.MetaData;
 import uk.gov.hmcts.ccd.data.definition.UIDefinitionRepository;
 import uk.gov.hmcts.ccd.domain.model.aggregated.CaseView;
+import uk.gov.hmcts.ccd.domain.model.aggregated.CompoundFieldOrderService;
 import uk.gov.hmcts.ccd.domain.model.definition.CaseDetails;
 import uk.gov.hmcts.ccd.domain.model.definition.CaseField;
 import uk.gov.hmcts.ccd.domain.model.definition.CaseState;
@@ -27,6 +28,7 @@ import uk.gov.hmcts.ccd.domain.service.common.ObjectMapperService;
 import uk.gov.hmcts.ccd.domain.service.common.UIDService;
 import uk.gov.hmcts.ccd.domain.service.getcase.GetCaseOperation;
 import uk.gov.hmcts.ccd.domain.service.getevents.GetEventsOperation;
+import uk.gov.hmcts.ccd.domain.service.processor.FieldProcessorService;
 
 import java.util.HashMap;
 import java.util.List;
@@ -44,9 +46,9 @@ import static org.hamcrest.Matchers.hasItemInArray;
 import static org.hamcrest.Matchers.hasProperty;
 import static org.hamcrest.Matchers.sameInstance;
 import static org.junit.jupiter.api.Assertions.assertAll;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Matchers.anyObject;
-import static org.mockito.Mockito.doReturn;
-import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.*;
 import static uk.gov.hmcts.ccd.domain.model.definition.FieldType.CASE_HISTORY_VIEWER;
 import static uk.gov.hmcts.ccd.domain.service.common.TestBuildersUtil.CaseFieldBuilder.newCaseField;
 import static uk.gov.hmcts.ccd.domain.service.common.TestBuildersUtil.CaseTabCollectionBuilder.newCaseTabCollection;
@@ -84,6 +86,12 @@ class DefaultGetCaseViewOperationTest {
 
     @Mock
     private ObjectMapperService objectMapperService;
+
+    @Mock
+    private CompoundFieldOrderService compoundFieldOrderService;
+
+    @Mock
+    private FieldProcessorService fieldProcessorService;
 
     @Spy
     @InjectMocks
@@ -141,6 +149,8 @@ class DefaultGetCaseViewOperationTest {
         caseState.setId(STATE);
         caseState.setTitleDisplay(TITLE_DISPLAY);
         doReturn(caseState).when(caseTypeService).findState(caseType, STATE);
+
+        doAnswer(invocation -> invocation.getArgument(0)).when(fieldProcessorService).processCaseViewField(any());
     }
 
     @Nested

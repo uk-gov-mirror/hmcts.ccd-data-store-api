@@ -3,13 +3,14 @@ package uk.gov.hmcts.ccd.v2.internal.resource;
 import java.util.Arrays;
 import java.util.stream.Collectors;
 
-import static org.springframework.hateoas.mvc.ControllerLinkBuilder.linkTo;
-import static org.springframework.hateoas.mvc.ControllerLinkBuilder.methodOn;
+import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.linkTo;
+import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.methodOn;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
-import org.springframework.hateoas.ResourceSupport;
+import org.springframework.hateoas.RepresentationModel;
 import uk.gov.hmcts.ccd.domain.model.search.Field;
 import uk.gov.hmcts.ccd.domain.model.search.WorkbasketInput;
 import uk.gov.hmcts.ccd.v2.internal.controller.UIDefinitionController;
@@ -17,14 +18,16 @@ import uk.gov.hmcts.ccd.v2.internal.controller.UIDefinitionController;
 @Data
 @EqualsAndHashCode(callSuper = true)
 @NoArgsConstructor
-public class UIWorkbasketInputsResource extends ResourceSupport {
+public class UIWorkbasketInputsResource extends RepresentationModel {
 
     @Data
     @NoArgsConstructor
-    public class UIWorkbasketInput {
+    public static class UIWorkbasketInput {
         private String label;
         private int order;
         private Field field;
+        @JsonProperty("display_context_parameter")
+        private String displayContextParameter;
     }
 
     private UIWorkbasketInput[] workbasketInputs;
@@ -46,6 +49,7 @@ public class UIWorkbasketInputsResource extends ResourceSupport {
         uiWorkbasketInput.setField(workbasketInput.getField());
         uiWorkbasketInput.setLabel(workbasketInput.getLabel());
         uiWorkbasketInput.setOrder(workbasketInput.getOrder());
+        uiWorkbasketInput.setDisplayContextParameter(workbasketInput.getDisplayContextParameter());
         return uiWorkbasketInput;
     }
 }

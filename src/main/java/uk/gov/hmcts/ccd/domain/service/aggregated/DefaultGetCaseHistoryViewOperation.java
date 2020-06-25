@@ -4,6 +4,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
 import uk.gov.hmcts.ccd.data.definition.UIDefinitionRepository;
+import uk.gov.hmcts.ccd.domain.model.aggregated.CompoundFieldOrderService;
 import uk.gov.hmcts.ccd.domain.model.aggregated.CaseHistoryView;
 import uk.gov.hmcts.ccd.domain.model.aggregated.CaseViewEvent;
 import uk.gov.hmcts.ccd.domain.model.aggregated.CaseViewType;
@@ -16,6 +17,7 @@ import uk.gov.hmcts.ccd.domain.service.common.UIDService;
 import uk.gov.hmcts.ccd.domain.service.getcase.CreatorGetCaseOperation;
 import uk.gov.hmcts.ccd.domain.service.getcase.GetCaseOperation;
 import uk.gov.hmcts.ccd.domain.service.getevents.GetEventsOperation;
+import uk.gov.hmcts.ccd.domain.service.processor.FieldProcessorService;
 import uk.gov.hmcts.ccd.endpoint.exceptions.ResourceNotFoundException;
 
 @Service
@@ -34,9 +36,11 @@ public class DefaultGetCaseHistoryViewOperation extends AbstractDefaultGetCaseVi
         @Qualifier("authorised") GetEventsOperation getEventsOperation,
         UIDefinitionRepository uiDefinitionRepository, CaseTypeService caseTypeService,
         UIDService uidService,
-        DefaultObjectMapperService defaultObjectMapperService) {
+        DefaultObjectMapperService defaultObjectMapperService,
+        CompoundFieldOrderService compoundFieldOrderService,
+        FieldProcessorService fieldProcessorService) {
 
-        super(getCaseOperation, uiDefinitionRepository, caseTypeService, uidService, defaultObjectMapperService);
+        super(getCaseOperation, uiDefinitionRepository, caseTypeService, uidService, defaultObjectMapperService, compoundFieldOrderService, fieldProcessorService);
         this.getEventsOperation = getEventsOperation;
     }
 

@@ -1,6 +1,6 @@
 buildscript {
     ext {
-        springBootVersion = '2.1.4.RELEASE'
+        springBootVersion = '2.2.5.RELEASE'
     }
     dependencies {
         classpath 'org.jsonschema2pojo:jsonschema2pojo-gradle-plugin:0.5.1'
@@ -19,6 +19,7 @@ buildscript {
 plugins {
     id 'application'
     id 'com.github.ben-manes.versions' version '0.20.0'
+    id 'io.spring.dependency-management' version '1.0.9.RELEASE'
     id 'org.sonarqube' version '2.6.2'
     id 'jacoco'
     id 'checkstyle'
@@ -27,6 +28,8 @@ plugins {
     id 'org.owasp.dependencycheck' version '5.1.0'
     id 'com.github.spotbugs' version '1.6.9'
     id 'net.ltgt.apt' version '0.21'
+    id 'com.github.spacialcircumstances.gradle-cucumber-reporting' version '0.1.14'
+    id "info.solidsoft.pitest" version '1.4.0'
 }
 
 apply plugin: 'java'
@@ -64,19 +67,6 @@ dependencyUpdates.resolutionStrategy = {
         }
     }
 }
-
-configurations.all {
-    resolutionStrategy {
-        eachDependency { DependencyResolveDetails details ->
-            // Wiremock requires old jetty because it still support java 7
-            // spring bom is currenty upgrading it
-            if (details.requested.group == 'org.eclipse.jetty') {
-                details.useVersion '9.2.24.v20180105'
-            }
-        }
-    }
-}
-
 // https://jeremylong.github.io/DependencyCheck/dependency-check-gradle/configuration.html
 dependencyCheck {
     // Specifies if the build should be failed if a CVSS score above a specified level is identified.
@@ -88,9 +78,9 @@ dependencyCheck {
         assemblyEnabled = false
     }
     // These are non-runtime configurations used during the build.
-    skipConfigurations = ['codacy', 'spotbugs']
+    skipConfigurations = ['codacy', 'spotbugs', 'checkstyle']
 }
-    
+
 mainClassName = 'uk.gov.hmcts.ccd.CoreCaseDataApplication'
 
 // tag::repositories[]
@@ -101,17 +91,18 @@ repositories {
     maven {
         url 'https://dl.bintray.com/hmcts/hmcts-maven'
     }
+    maven { url 'http://oss.jfrog.org/artifactory/oss-snapshot-local/' }
 }
 // end::repositories[]
 
 ext {
-    junitJupiterVersion = '5.2.0'
-    junitVintageVersion = '5.2.0'
+    junitJupiterVersion = '5.5.2'
+    junitVintageVersion = '5.5.2'
     hibernateVersion = '5.2.18.Final'
     powermockVersion = '2.0.0-beta.5'
     reformLogging = '5.1.0'
     appInsightsVersion = '2.4.1'
-    swagger2Version = '2.9.2'
+    swagger2Version = '3.0.0-SNAPSHOT'
     limits = [
             'instruction': 90,
             'branch'     : 85,
@@ -121,7 +112,7 @@ ext {
             'class'      : 98
     ]
     appInsights = '2.0.1'
-    springCloudVersion = 'Greenwich.RELEASE'
+    springCloudVersion = 'Hoxton.RELEASE'
 }
 
 group 'uk.gov.hmcts.ccd'
@@ -147,6 +138,7 @@ configurations {
 
     aatCompile.extendsFrom(testCompile)
     aatRuntime.extendsFrom(testRuntime)
+    cucumberRuntime.extendsFrom(functionalRuntime)
 }
 
 checkstyle {
@@ -195,6 +187,7 @@ dependencies {
         exclude group: 'org.hibernate', module: 'hibernate-entitymanager'
     }
     compile('org.springframework.boot:spring-boot-starter-hateoas')
+    compile group: 'org.springframework.plugin', name: 'spring-plugin-core', version: '2.0.0.RELEASE'
     compile(group: 'org.springframework.boot', name: 'spring-boot-starter-jdbc') {
         exclude group: 'org.apache.tomcat', module: 'tomcat-jdbc'
     }
@@ -210,8 +203,9 @@ dependencies {
     compile group: 'org.apache.logging.log4j', name: 'log4j-api', version: '2.11.1'
     compile group: 'io.springfox', name: 'springfox-swagger2', version: swagger2Version
     compile group: 'io.springfox', name: 'springfox-swagger-ui', version: swagger2Version
+    compile group: 'io.springfox', name: 'springfox-spring-webmvc', version: swagger2Version
     compile group: 'org.liquibase', name: 'liquibase-core', version: '3.6.3'
-    compile group: 'com.fasterxml.jackson.datatype', name: 'jackson-datatype-jsr310', version: '2.9.10'
+
     compile (group: 'uk.gov.hmcts.reform.auth', name: 'auth-checker-lib', version: '2.1.3') {
         // TODO remove when auth-checker-lib upgrades its dependency to spring boot 2.0.x
         exclude group: 'uk.gov.hmcts.reform', module: 'java-logging-spring'
@@ -225,8 +219,19 @@ dependencies {
     compile group: 'com.jayway.jsonpath', name: 'json-path', version: '2.4.0'
     compile group: 'org.awaitility', name: 'awaitility', version: '3.1.6'
 
-    // CVE-2019-12086 - force update of jackson-databind - remove when dependencies move off <2.9.9
-    compile "com.fasterxml.jackson.core:jackson-databind:2.9.10.1"
+    compile group: 'com.fasterxml.jackson.datatype', name: 'jackson-datatype-jsr310', version: '2.10.3'
+    compile "com.fasterxml.jackson.core:jackson-databind:2.10.3"
+
+    // use the latest org.springframework.security
+    compile group: 'org.springframework.security', name: 'spring-security-core', version: '5.3.0.RELEASE'
+
+    compile group: 'org.springframework.security', name: 'spring-security-config', version: '5.3.0.RELEASE'
+
+    compile group: 'org.springframework.security', name: 'spring-security-web', version: '5.3.0.RELEASE'
+
+    compile group: 'org.springframework.security', name: 'spring-security-crypto', version: '5.3.0.RELEASE'
+
+
 
     // FIXME 0.6 doesn't support jsonb; 0.7 doesn't work on Windows
 //    runtime group: 'com.impossibl.pgjdbc-ng', name: 'pgjdbc-ng', version: '0.6'
@@ -236,8 +241,8 @@ dependencies {
     testImplementation('org.springframework.boot:spring-boot-starter-test')
     testImplementation('org.springframework.cloud:spring-cloud-starter-contract-stub-runner')
     testCompile ('com.opentable.components:otj-pg-embedded:0.12.0')
-    testCompile ('com.github.tomakehurst:wiremock-jre8:2.21.0')
-    testCompile ('org.springframework.cloud:spring-cloud-contract-wiremock:2.1.0.RELEASE')
+    testCompile ('com.github.tomakehurst:wiremock-jre8:2.25.1')
+    testCompile ('org.springframework.cloud:spring-cloud-contract-wiremock:2.2.1.RELEASE')
     // To avoid compiler warnings about @API annotations in JUnit5 code.
     testCompileOnly 'org.apiguardian:apiguardian-api:1.0.0'
     testCompile "org.junit.jupiter:junit-jupiter-api:${junitJupiterVersion}"
@@ -264,6 +269,8 @@ dependencies {
         exclude group: 'org.apache.logging.log4j', module: 'log4j-api'
     }
     compile 'org.jooq:jool-java-8:0.9.14'
+
+    testCompile group: 'uk.gov.hmcts', name: 'befta-fw', version: '2.6.0'
 }
 // end::dependencies[]
 
@@ -277,7 +284,7 @@ dependencyManagement {
         dependency 'com.google.guava:guava:24.1.1-jre'
 
         // CVE-2019-0232 - Java and Command Line injections in Windows
-        dependencySet(group: 'org.apache.tomcat.embed', version: '9.0.21') {
+        dependencySet(group: 'org.apache.tomcat.embed', version: '9.0.31') {
             entry 'tomcat-embed-core'
             entry 'tomcat-embed-el'
             entry 'tomcat-embed-websocket'
@@ -288,6 +295,79 @@ dependencyManagement {
         }
     }
 }
+
+pitest {
+
+    targetClasses = ['uk.gov.hmcts.ccd.config.*',
+                     'uk.gov.hmcts.ccd.AuthCheckerConfiguration',
+                     'uk.gov.hmcts.ccd.exception.*',
+                     'uk.gov.hmcts.ccd.infrastructure.*',
+                     'uk.gov.hmcts.ccd.data.*',
+                     'uk.gov.hmcts.ccd.domain.*']
+
+    targetTests = ['uk.gov.hmcts.ccd.config.*',
+                   'uk.gov.hmcts.ccd.AuthCheckingConfigurationTest',
+                   'uk.gov.hmcts.ccd.infrastructure.user.*',
+                   'uk.gov.hmcts.ccd.data.caseaccess.[!DefaultCaseUserRepositoryTest].*',
+                   'uk.gov.hmcts.ccd.data.casedetails.query.*',
+                   'uk.gov.hmcts.ccd.data.casedetails.search.*',
+                   'uk.gov.hmcts.ccd.data.casedetails.[!CaseAuditEventRepositoryTest].*',
+                   'uk.gov.hmcts.ccd.data.casedetails.[!DefaultCaseDetailsRepositoryTest].*',
+                   'uk.gov.hmcts.ccd.data.definition.CachedCaseDefinitionRepositoryTest',
+                   'uk.gov.hmcts.ccd.data.draft.*',
+                   'uk.gov.hmcts.ccd.data.JSONBConverterTest',
+                   'uk.gov.hmcts.ccd.data.SecurityUtilsTest',
+                   'uk.gov.hmcts.ccd.domain.model.*',
+                   'uk.gov.hmcts.ccd.domain.service.aggregated.*',
+                   'uk.gov.hmcts.ccd.domain.service.callbacks.CallbackServiceTest',
+                   'uk.gov.hmcts.ccd.domain.service.caseaccess.*',
+                   'uk.gov.hmcts.ccd.domain.service.common.*',
+                   'uk.gov.hmcts.ccd.domain.service.createcase.*',
+                   'uk.gov.hmcts.ccd.domain.service.createevent.*',
+                   'uk.gov.hmcts.ccd.domain.service.getcase.*',
+                   'uk.gov.hmcts.ccd.domain.service.getdraft.*',
+                   'uk.gov.hmcts.ccd.domain.service.getevents.*',
+                   'uk.gov.hmcts.ccd.domain.service.search.*',
+                   'uk.gov.hmcts.ccd.domain.service.startevent.*',
+                   'uk.gov.hmcts.ccd.domain.service.stdapi.CallbackInvokerTest',
+                   'uk.gov.hmcts.ccd.domain.service.stdapi.PrintableDocumentListOperationTest',
+                   'uk.gov.hmcts.ccd.domain.service.upsertdraft.*',
+                   'uk.gov.hmcts.ccd.domain.service.validate.*',
+                   'uk.gov.hmcts.ccd.domain.types.sanitiser.client.*',
+                   'uk.gov.hmcts.ccd.domain.types.sanitiser.*',
+                   'uk.gov.hmcts.ccd.domain.types.[!CaseDataValidatorTest].*',
+                   'uk.gov.hmcts.ccd.test.*',
+                   'uk.gov.hmcts.ccd.v2.external.controller.[!CaseControllerTestIT].*',
+                   'uk.gov.hmcts.ccd.v2.external.controller.[!DocumentControllerITest].*',
+                   'uk.gov.hmcts.ccd.v2.external.controller.[!StartTriggerControllerCaseRolesIT].*',
+                   'uk.gov.hmcts.ccd.v2.internal.controller.[!UICaseControllerCaseRolesIT].*',
+                   'uk.gov.hmcts.ccd.v2.internal.controller.[!UIStartTriggerControllerCaseRolesIT].*',
+                   'uk.gov.hmcts.ccd.v2.external.resource.*',
+                   'uk.gov.hmcts.ccd.v2.internal.resource.*'
+    ]
+    excludedClasses = ['uk.gov.hmcts.ccd.CoreCaseDataApplication',
+                       'uk.gov.hmcts.ccd.PersistenceIT'
+    ]
+
+    enableDefaultIncrementalAnalysis = true
+    historyInputLocation = ['build/reports/pitest/fastermutationtesting']
+    historyOutputLocation = ['build/reports/pitest/fastermutationtestingoutput']
+    threads = 15
+    testSourceSets = [sourceSets.test]
+    mainSourceSets = [sourceSets.main]
+    fileExtensionsToFilter.addAll('xml','json')
+    outputFormats = ['XML', 'HTML','CSV']
+    mutationThreshold = 4
+    coverageThreshold = 4
+    maxMutationsPerClass = 15
+    jvmArgs = ['-Xms1G','-Xmx3G']
+    timestampedReports = false
+    failWhenNoMutations = false
+    detectInlinedCode = true
+
+}
+project.tasks['pitest'].group = "Verification"
+
 
 task projectVersion {
     description 'Prints the version of this project; used for publishing JAR file'
@@ -487,12 +567,9 @@ jacoco {
 sonarqube {
     properties {
         property "sonar.exclusions", "build/generated-sources/**/*.java,**/service/doclink/**"
-        property "sonar.coverage.exclusions", "src/main/java/uk/gov/hmcts/ccd/data/definition/DefaultCaseDefinitionRepository.java,src/main/java/uk/gov/hmcts/ccd/AppInsights.java," +
-                "**/DocLinksRestoreEndpoint.java,**/service/doclink/**"
-        property "sonar.jacoco.reportPaths", "${project.buildDir}/jacoco/junitPlatformTest.exec"
-        property "sonar.junit.reportPaths", "${project.buildDir}/test-results/junit-platform"
         property "sonar.projectName", "ccd-data-store-api"
         property "sonar.projectKey", "ccd-data-store-api"
+        property "sonar.coverage.jacoco.xmlReportPaths", "${jacocoTestReport.reports.xml.destination.path}"
     }
 }
 
@@ -519,7 +596,10 @@ jacocoTestReport {
 
     afterEvaluate {
         classDirectories = files(classDirectories.files.collect {
-            fileTree(dir: it, exclude: ['uk/gov/hmcts/ccd/domain/types/sanitiser/document/**', '**/service/doclink/**'])
+            fileTree(dir: it, exclude: ['uk/gov/hmcts/ccd/domain/types/sanitiser/document/**',
+                                        '**/service/doclink/**',
+                                        '**/domain/model/definition/CaseEventFieldComplex**',
+                                        '**/domain/model/definition/DisplayContext**'])
         })
     }
 
@@ -573,6 +653,7 @@ jacocoTestReport {
 
 test {
     environment("AZURE_APPLICATIONINSIGHTS_INSTRUMENTATIONKEY", "some-key")
+    generateCucumberReports.enabled = false
 
     useJUnitPlatform()
 
@@ -618,7 +699,6 @@ task smoke(type: Test) {
     systemProperty "https.proxyPort", System.getProperty('https.proxyPort')
 
     environment("AZURE_APPLICATIONINSIGHTS_INSTRUMENTATIONKEY", "some-key")
-
     group = 'Delivery pipeline'
     description = 'Executes smoke tests against an AAT CCD Data Store instance'
     setTestClassesDirs(sourceSets.aat.output.classesDirs)
@@ -627,6 +707,14 @@ task smoke(type: Test) {
     include "uk/gov/hmcts/ccd/datastore/tests/v2/**"
     useJUnitPlatform {
         includeTags 'smoke'
+    }
+
+    doFirst {
+        javaexec {
+            main = "uk.gov.hmcts.ccd.datastore.befta.TestDataLoaderMain"
+            classpath += sourceSets.aat.runtimeClasspath + sourceSets.main.output + sourceSets.test.output
+            args = ['']
+        }
     }
 
 }
@@ -646,6 +734,16 @@ task functional(type: Test) {
     include "uk/gov/hmcts/ccd/datastore/tests/functional/**"
     include "uk/gov/hmcts/ccd/datastore/tests/v2/**"
     useJUnitPlatform()
+
+    doFirst {
+        generateCucumberReports.enabled = true
+        javaexec {
+            main = "uk.gov.hmcts.ccd.datastore.befta.DataStoreBeftaMain"
+            classpath += configurations.cucumberRuntime + sourceSets.aat.runtimeClasspath + sourceSets.main.output + sourceSets.test.output
+            args = ['--plugin', "json:${projectDir}/target/cucumber.json", '--tags', 'not @Ignore', '--glue',
+                    'uk.gov.hmcts.befta.player', 'src/aat/resources/features']
+        }
+    }
 }
 
 
@@ -685,6 +783,11 @@ task sendCoverageToCodacy(type: JavaExec, dependsOn: jacocoTestReport) {
             "-r",
             "${buildDir}/reports/jacoco/test/jacocoTestReport.xml"
     ]
+}
+
+cucumberReports {
+    outputDir = file("${projectDir}/target/cucumber")
+    reports = files("${projectDir}/target/cucumber.json")
 }
 
 task installDist(overwrite: true) {

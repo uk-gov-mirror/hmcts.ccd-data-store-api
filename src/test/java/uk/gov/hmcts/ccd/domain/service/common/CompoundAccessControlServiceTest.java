@@ -1,11 +1,23 @@
 package uk.gov.hmcts.ccd.domain.service.common;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Nested;
+import org.junit.jupiter.api.Test;
+import uk.gov.hmcts.ccd.config.JacksonUtils;
+import uk.gov.hmcts.ccd.domain.model.definition.CaseField;
+import uk.gov.hmcts.ccd.domain.model.definition.CaseType;
+
+import java.io.IOException;
+import java.util.Map;
+
 import static java.util.Arrays.asList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
 import static uk.gov.hmcts.ccd.domain.model.definition.FieldType.COMPLEX;
 import static uk.gov.hmcts.ccd.domain.service.common.AccessControlServiceTest.ROLE_IN_USER_ROLES;
-import static uk.gov.hmcts.ccd.domain.service.common.AccessControlServiceTest.STRING_JSON_MAP;
 import static uk.gov.hmcts.ccd.domain.service.common.AccessControlServiceTest.USER_ROLES;
 import static uk.gov.hmcts.ccd.domain.service.common.AccessControlServiceTest.addressesStart;
 import static uk.gov.hmcts.ccd.domain.service.common.AccessControlServiceTest.getPeopleCollectionFieldDefinition;
@@ -24,21 +36,8 @@ import static uk.gov.hmcts.ccd.domain.service.common.TestBuildersUtil.CaseTypeBu
 import static uk.gov.hmcts.ccd.domain.service.common.TestBuildersUtil.ComplexACLBuilder.aComplexACL;
 import static uk.gov.hmcts.ccd.domain.service.common.TestBuildersUtil.FieldTypeBuilder.aFieldType;
 
-import uk.gov.hmcts.ccd.domain.model.definition.CaseField;
-import uk.gov.hmcts.ccd.domain.model.definition.CaseType;
-
-import java.io.IOException;
-import java.util.Map;
-
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.Nested;
-import org.junit.jupiter.api.Test;
-
 class CompoundAccessControlServiceTest {
-    private static final ObjectMapper MAPPER = new ObjectMapper();
+    private static final ObjectMapper MAPPER = JacksonUtils.MAPPER;
     private CompoundAccessControlService compoundAccessControlService;
     private static final String newAddress1 = "      {\n"
         + "        \"value\": {\n"
@@ -1155,6 +1154,142 @@ class CompoundAccessControlServiceTest {
         }
     }
 
+    @Nested
+    @DisplayName("Compound Field - nested complex fields")
+    class CompoundFieldComplexUnderCollectionFieldTests {
+
+        @Test
+        @DisplayName("Should grant access when a nested complex child node is deleted and has the required ACLs - whole node deleted")
+        void shouldGrantAccessWhenNestedComplexChildDeletedAndDeleteACLExists() throws IOException {
+            final CaseField people = getPeopleCollectionFieldDefinition();
+            people.setAccessControlLists(asList(anAcl()
+                .withRole(ROLE_IN_USER_ROLES)
+                .withDelete(true)
+                .build()));
+
+            final CaseType caseType = newCaseType().withField(people).build();
+            caseType.getCaseFields().stream().forEach(caseField -> caseField.propagateACLsToNestedFields());
+
+            String p1 = existingPersonStart + name + "," + birthInfo + personEnd;
+            JsonNode existingData = generatePeopleDataWithPerson(p1);
+
+            String p2 = existingPersonStart + name + personEnd;
+            JsonNode newData = generatePeopleDataWithPerson(p2); // i.e. with deleted BirthInfo
+
+            assertThat(compoundAccessControlService.hasAccessForAction(newData, existingData, people, USER_ROLES), is(true));
+        }
+
+        @Test
+        @DisplayName("Should grant access when a nested complex child node is deleted and has the required fine grained ACLs - whole node deleted")
+        void shouldGrantAccessWhenNestedComplexChildDeletedAndFineGrainedDeleteACLExists() throws IOException {
+            final CaseField people = getPeopleCollectionFieldDefinition();
+            people.setAccessControlLists(asList(anAcl()
+                .withRole(ROLE_IN_USER_ROLES)
+                .withDelete(true)
+                .build()));
+            people.setComplexACLs(asList(
+                aComplexACL()
+                    .withListElementCode("BirthInfo")
+                    .withRole(ROLE_IN_USER_ROLES)
+                    .withDelete(true)
+                    .build()));
+
+            final CaseType caseType = newCaseType().withField(people).build();
+            caseType.getCaseFields().stream().forEach(caseField -> caseField.propagateACLsToNestedFields());
+
+            String p1 = existingPersonStart + name + "," + birthInfo + personEnd;
+            JsonNode existingData = generatePeopleDataWithPerson(p1);
+
+            String p2 = existingPersonStart + name + personEnd;
+            JsonNode newData = generatePeopleDataWithPerson(p2); // i.e. with deleted BirthInfo
+
+            assertThat(compoundAccessControlService.hasAccessForAction(newData, existingData, people, USER_ROLES), is(true));
+        }
+
+        @Test
+        @DisplayName("Should be OK with empty nested complex child in new data")
+        void shouldBeOKWithEmptyNestedComplexFieldInNewData() throws IOException {
+            final CaseField people = getPeopleCollectionFieldDefinition();
+            people.setAccessControlLists(asList(anAcl()
+                .withRole(ROLE_IN_USER_ROLES)
+                .withDelete(true)
+                .build()));
+
+            final CaseType caseType = newCaseType().withField(people).build();
+            caseType.getCaseFields().stream().forEach(caseField -> caseField.propagateACLsToNestedFields());
+
+            String p1 = existingPersonStart + name + "," + birthInfo + personEnd;
+            JsonNode existingData = generatePeopleDataWithPerson(p1);
+
+            String p2 = existingPersonStart + name + ",    \"BirthInfo\": {}" + personEnd;
+            JsonNode newData = generatePeopleDataWithPerson(p2);
+
+            assertThat(compoundAccessControlService.hasAccessForAction(newData, existingData, people, USER_ROLES), is(true));
+        }
+
+        @Test
+        @DisplayName("Should be OK with empty nested complex child in existing data")
+        void shouldBeOKWithEmptyNestedComplexFieldInExistingData() throws IOException {
+            final CaseField people = getPeopleCollectionFieldDefinition();
+            people.setAccessControlLists(asList(anAcl()
+                .withRole(ROLE_IN_USER_ROLES)
+                .withDelete(true)
+                .build()));
+
+            final CaseType caseType = newCaseType().withField(people).build();
+            caseType.getCaseFields().stream().forEach(caseField -> caseField.propagateACLsToNestedFields());
+
+            String p1 = existingPersonStart + name + ",    \"BirthInfo\": {}" + personEnd;
+            JsonNode existingData = generatePeopleDataWithPerson(p1);
+
+            String p2 = existingPersonStart + name + "," + birthInfo + personEnd;
+            JsonNode newData = generatePeopleDataWithPerson(p2);
+
+            assertThat(compoundAccessControlService.hasAccessForAction(newData, existingData, people, USER_ROLES), is(true));
+        }
+
+        @Test
+        @DisplayName("Should be OK with null nested complex child in new data")
+        void shouldBeOKWithNullNestedComplexFieldInNewData() throws IOException {
+            final CaseField people = getPeopleCollectionFieldDefinition();
+            people.setAccessControlLists(asList(anAcl()
+                .withRole(ROLE_IN_USER_ROLES)
+                .withDelete(true)
+                .build()));
+
+            final CaseType caseType = newCaseType().withField(people).build();
+            caseType.getCaseFields().stream().forEach(caseField -> caseField.propagateACLsToNestedFields());
+
+            String p1 = existingPersonStart + name + "," + birthInfo + personEnd;
+            JsonNode existingData = generatePeopleDataWithPerson(p1);
+
+            String p2 = existingPersonStart + name + ",    \"BirthInfo\": null" + personEnd;
+            JsonNode newData = generatePeopleDataWithPerson(p2);
+
+            assertThat(compoundAccessControlService.hasAccessForAction(newData, existingData, people, USER_ROLES), is(true));
+        }
+
+        @Test
+        @DisplayName("Should be OK with null nested complex child in existing data")
+        void shouldBeOKWithNullNestedComplexFieldInExistingData() throws IOException {
+            final CaseField people = getPeopleCollectionFieldDefinition();
+            people.setAccessControlLists(asList(anAcl()
+                .withRole(ROLE_IN_USER_ROLES)
+                .withDelete(true)
+                .build()));
+
+            final CaseType caseType = newCaseType().withField(people).build();
+            caseType.getCaseFields().stream().forEach(caseField -> caseField.propagateACLsToNestedFields());
+
+            String p1 = existingPersonStart + name + ",    \"BirthInfo\": null" + personEnd;
+            JsonNode existingData = generatePeopleDataWithPerson(p1);
+
+            String p2 = existingPersonStart + name + "," + birthInfo + personEnd;
+            JsonNode newData = generatePeopleDataWithPerson(p2);
+
+            assertThat(compoundAccessControlService.hasAccessForAction(newData, existingData, people, USER_ROLES), is(true));
+        }
+    }
 
     @Nested
     @DisplayName("Compound Field - Collection Under Complex Tests")
@@ -1452,14 +1587,14 @@ class CompoundAccessControlServiceTest {
             people += args[i] + (i == args.length - 1 ? "" : ",");
         }
         people = people + peopleEnd;
-        final Map<String, JsonNode> data = MAPPER.convertValue(MAPPER.readTree(people), STRING_JSON_MAP);
+        final Map<String, JsonNode> data = JacksonUtils.convertValue(MAPPER.readTree(people));
 
-        return MAPPER.convertValue(data, JsonNode.class);
+        return JacksonUtils.convertValueJsonNode(data);
     }
 
     static JsonNode generateJsonNodeWithData(String stringData) throws IOException {
-        final Map<String, JsonNode> data = MAPPER.convertValue(MAPPER.readTree(stringData), STRING_JSON_MAP);
+        final Map<String, JsonNode> data = JacksonUtils.convertValue(MAPPER.readTree(stringData));
 
-        return MAPPER.convertValue(data, JsonNode.class);
+        return JacksonUtils.convertValueJsonNode(data);
     }
 }

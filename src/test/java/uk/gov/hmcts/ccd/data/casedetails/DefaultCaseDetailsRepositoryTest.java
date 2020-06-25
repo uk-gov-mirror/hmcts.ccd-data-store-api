@@ -1,21 +1,6 @@
 package uk.gov.hmcts.ccd.data.casedetails;
 
-import javax.inject.Inject;
-import java.io.IOException;
-import java.time.LocalDateTime;
-import java.time.ZoneOffset;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Optional;
-
-import static org.hamcrest.Matchers.*;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertThat;
-import static org.junit.jupiter.api.Assertions.assertAll;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
-import static uk.gov.hmcts.ccd.domain.service.common.AccessControlService.CAN_READ;
-
+import com.google.common.collect.Maps;
 import org.hamcrest.MatcherAssert;
 import org.junit.Before;
 import org.junit.Test;
@@ -23,14 +8,42 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.jdbc.Sql;
+import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.transaction.annotation.Transactional;
+import uk.gov.hmcts.ccd.ApplicationParams;
 import uk.gov.hmcts.ccd.BaseTest;
+import uk.gov.hmcts.ccd.config.JacksonUtils;
 import uk.gov.hmcts.ccd.data.casedetails.search.MetaData;
 import uk.gov.hmcts.ccd.data.casedetails.search.PaginatedSearchMetadata;
+import uk.gov.hmcts.ccd.data.casedetails.search.SortOrderField;
 import uk.gov.hmcts.ccd.domain.model.definition.CaseDetails;
 import uk.gov.hmcts.ccd.domain.service.security.AuthorisedCaseDefinitionDataService;
 import uk.gov.hmcts.ccd.infrastructure.user.UserAuthorisation;
 import uk.gov.hmcts.ccd.infrastructure.user.UserAuthorisation.AccessLevel;
+
+import javax.inject.Inject;
+import java.io.IOException;
+import java.time.LocalDateTime;
+import java.time.ZoneOffset;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+
+import static java.util.Arrays.asList;
+import static org.hamcrest.Matchers.allOf;
+import static org.hamcrest.Matchers.equalTo;
+import static org.hamcrest.Matchers.hasItem;
+import static org.hamcrest.Matchers.hasProperty;
+import static org.hamcrest.Matchers.hasSize;
+import static org.hamcrest.Matchers.is;
+import static org.hamcrest.Matchers.notNullValue;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertThat;
+import static org.junit.jupiter.api.Assertions.assertAll;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+import static uk.gov.hmcts.ccd.domain.service.common.AccessControlService.CAN_READ;
 
 @Transactional
 public class DefaultCaseDetailsRepositoryTest extends BaseTest {
@@ -56,6 +69,9 @@ public class DefaultCaseDetailsRepositoryTest extends BaseTest {
     @Qualifier(DefaultCaseDetailsRepository.QUALIFIER)
     private CaseDetailsRepository caseDetailsRepository;
 
+    @Inject
+    private ApplicationParams applicationParams;
+
     @Before
     public void setUp() {
         template = new JdbcTemplate(db);
@@ -73,9 +89,8 @@ public class DefaultCaseDetailsRepositoryTest extends BaseTest {
         caseDetails.setState("CaseCreated");
         caseDetails.setSecurityClassification(SecurityClassification.PUBLIC);
         try {
-            caseDetails.setData(mapper.convertValue(
-                mapper.readTree("{\"Alliases\": [], \"HasOtherInfo\": \"Yes\"}"),
-                STRING_NODE_TYPE));
+            caseDetails.setData(JacksonUtils.convertValue(
+                mapper.readTree("{\"Alliases\": [], \"HasOtherInfo\": \"Yes\"}")));
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -87,7 +102,7 @@ public class DefaultCaseDetailsRepositoryTest extends BaseTest {
     }
 
     @Test
-    @Sql(executionPhase = Sql.ExecutionPhase.BEFORE_TEST_METHOD, scripts = { "classpath:sql/insert_cases.sql" })
+    @Sql(executionPhase = Sql.ExecutionPhase.BEFORE_TEST_METHOD, scripts = {"classpath:sql/insert_cases.sql"})
     public void findByIdShouldReturnCorrectSingleRecord() {
         assumeDataInitialised();
 
@@ -108,7 +123,7 @@ public class DefaultCaseDetailsRepositoryTest extends BaseTest {
     }
 
     @Test
-    @Sql(executionPhase = Sql.ExecutionPhase.BEFORE_TEST_METHOD, scripts = { "classpath:sql/insert_cases.sql" })
+    @Sql(executionPhase = Sql.ExecutionPhase.BEFORE_TEST_METHOD, scripts = {"classpath:sql/insert_cases.sql"})
     public void findByReferenceShouldReturnCorrectSingleRecord() {
         assumeDataInitialised();
 
@@ -129,7 +144,154 @@ public class DefaultCaseDetailsRepositoryTest extends BaseTest {
     }
 
     @Test
-    @Sql(executionPhase = Sql.ExecutionPhase.BEFORE_TEST_METHOD, scripts = { "classpath:sql/insert_cases.sql" })
+    public void sanitisesInputsCountQuery() {
+        String evil = "foo');insert into case users values(1,2,3);--";
+        when(authorisedCaseDefinitionDataService.getUserAuthorisedCaseStateIds("PROBATE", "TestAddressBookCase", CAN_READ))
+            .thenReturn(asList(evil));
+
+        when(userAuthorisation.getAccessLevel()).thenReturn(AccessLevel.GRANTED);
+        when(userAuthorisation.getUserId()).thenReturn(evil);
+
+        MetaData metadata = new MetaData("TestAddressBookCase", "PROBATE");
+        final PaginatedSearchMetadata byMetaData = caseDetailsRepository.getPaginatedSearchMetadata(metadata, Maps.newHashMap());
+
+        // If any input is not correctly sanitized it will cause an exception since query result structure will not be as hibernate expects.
+        assertThat(byMetaData.getTotalResultsCount(), is(0));
+    }
+
+//  This test should be uncommented as part of future RDM-7408
+//    @Test(expected = IllegalArgumentException.class)
+//    public void validateInputsMainQuerySortOrder() {
+//        String evil = "foo');insert into case users values(1,2,3);--";
+//        when(authorisedCaseDefinitionDataService.getUserAuthorisedCaseStateIds("PROBATE", "TestAddressBookCase", CAN_READ))
+//            .thenReturn(asList(evil));
+//
+//        when(userAuthorisation.getAccessLevel()).thenReturn(AccessLevel.GRANTED);
+//        when(userAuthorisation.getUserId()).thenReturn(evil);
+//
+//        MetaData metadata = new MetaData("TestAddressBookCase", "PROBATE");
+//        metadata.addSortOrderField(SortOrderField.sortOrderWith()
+//                                       .caseFieldId(evil)
+//                                       .metadata(false)
+//                                       .direction("DESC")
+//                                       .build());
+//
+//        // If any input is not correctly validated it will pass the query to jdbc driver creating potential sql injection vulnerability
+//        caseDetailsRepository.findByMetaDataAndFieldData(metadata, Maps.newHashMap());
+//    }
+
+    @Test
+    public void sanitiseInputMainQuerySortOrderForDirection() {
+        String evil = "foo');insert into case users values(1,2,3);--";
+
+        MetaData metadata = new MetaData("TestAddressBookCase", "PROBATE");
+        metadata.setSortDirection(Optional.of("Asc"));
+        metadata.addSortOrderField(SortOrderField.sortOrderWith()
+            .caseFieldId("[CASE_REFERENCE]")
+            .metadata(true)
+            .direction(evil)
+            .build());
+
+        final List<CaseDetails> byMetaData = caseDetailsRepository.findByMetaDataAndFieldData(metadata, Maps.newHashMap());
+
+        // If any input is not correctly sanitized it will cause an exception since query result structure will not be as hibernate expects.
+        assertThat(byMetaData.size(), is(0));
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void validateInputMainQueryMetaDataFieldId() {
+        String notSoEvil = "[UNKNOWN_FIELD]";
+
+        MetaData metadata = new MetaData("TestAddressBookCase", "PROBATE");
+        metadata.setSortDirection(Optional.of("Asc"));
+        metadata.addSortOrderField(SortOrderField.sortOrderWith()
+            .caseFieldId(notSoEvil)
+            .metadata(true)
+            .direction("DESC")
+            .build());
+
+        // If any input is not correctly validated it will pass the query to jdbc driver creating potential sql injection vulnerability
+        caseDetailsRepository.findByMetaDataAndFieldData(metadata, Maps.newHashMap());
+    }
+
+    @Test
+    @Sql(executionPhase = Sql.ExecutionPhase.BEFORE_TEST_METHOD, scripts = {"classpath:sql/insert_cases.sql"})
+    public void findByWildcardReturnCorrectRecords() {
+        ReflectionTestUtils.setField(applicationParams, "wildcardSearchAllowed", true);
+        MetaData metadata = new MetaData("TestAddressBookCase", "PROBATE");
+
+        Map<String, String> params = Maps.newHashMap();
+        params.put("PersonFirstName", "%An%");
+        final PaginatedSearchMetadata byMetaData = caseDetailsRepository.getPaginatedSearchMetadata(metadata, params);
+        // See case types and citizen names in insert_cases.sql to understand this result.
+        assertThat(byMetaData.getTotalResultsCount(), is(5));
+    }
+
+    @Test
+    @Sql(executionPhase = Sql.ExecutionPhase.BEFORE_TEST_METHOD, scripts = {"classpath:sql/insert_cases.sql"})
+    public void getFindByMetadataReturnCorrectRecords() {
+        assumeDataInitialised();
+
+        MetaData metadata = new MetaData("TestAddressBookCase", "PROBATE");
+        final PaginatedSearchMetadata byMetaData = caseDetailsRepository.getPaginatedSearchMetadata(metadata, Maps.newHashMap());
+        assertThat(byMetaData.getTotalResultsCount(), is(7));
+    }
+
+    @Test
+    @Sql(executionPhase = Sql.ExecutionPhase.BEFORE_TEST_METHOD, scripts = {"classpath:sql/insert_cases.sql"})
+    public void getFindByMetadataAndFieldDataSortDescByMetaDataField() {
+        assumeDataInitialised();
+
+        MetaData metadata = new MetaData("TestAddressBookCase", "PROBATE");
+        metadata.setSortDirection(Optional.of("Asc"));
+        SortOrderField sortOrderField = SortOrderField.sortOrderWith()
+            .caseFieldId("[LAST_MODIFIED_DATE]")
+            .metadata(true)
+            .direction("DESC")
+            .build();
+        metadata.addSortOrderField(sortOrderField);
+
+        HashMap<String, String> searchParams = new HashMap<>();
+        searchParams.put("PersonFirstName", "Janet");
+        final List<CaseDetails> byMetaDataAndFieldData = caseDetailsRepository.findByMetaDataAndFieldData(metadata,
+            searchParams);
+
+        // See the timestamps in insert_cases.sql.
+        // Should be ordered by last modified desc, creation date asc.
+        assertThat(byMetaDataAndFieldData.get(0).getId(), is("16"));
+        assertThat(byMetaDataAndFieldData.get(1).getId(), is("1"));
+    }
+
+    @Test
+    @Sql(executionPhase = Sql.ExecutionPhase.BEFORE_TEST_METHOD, scripts = {"classpath:sql/insert_cases.sql"})
+    public void getFindByMetadataAndFieldDataSortByBothCaseAndMetadataFields() {
+        assumeDataInitialised();
+
+        MetaData metadata = new MetaData("TestAddressBookCase", "PROBATE");
+        metadata.setSortDirection(Optional.of("Asc"));
+        metadata.addSortOrderField(SortOrderField.sortOrderWith()
+            .caseFieldId("[LAST_MODIFIED_DATE]")
+            .metadata(true)
+            .direction("ASC")
+            .build());
+        metadata.addSortOrderField(SortOrderField.sortOrderWith()
+            .caseFieldId("PersonLastName")
+            .metadata(false)
+            .direction("DESC")
+            .build());
+
+        final List<CaseDetails> byMetaDataAndFieldData = caseDetailsRepository.findByMetaDataAndFieldData(metadata,
+            Maps.newHashMap());
+
+        // See the timestamps in insert_cases.sql. (2 results based on pagination size = 2)
+        // Should be ordered by last modified desc, person last name, creation date asc.
+        assertThat(byMetaDataAndFieldData.size(), is(2));
+        assertThat(byMetaDataAndFieldData.get(0).getId(), is("1"));
+        assertThat(byMetaDataAndFieldData.get(1).getId(), is("2"));
+    }
+
+    @Test
+    @Sql(executionPhase = Sql.ExecutionPhase.BEFORE_TEST_METHOD, scripts = {"classpath:sql/insert_cases.sql"})
     public void getFindByMetadataAndFieldDataReturnCorrectRecords() {
         assumeDataInitialised();
 
@@ -137,7 +299,7 @@ public class DefaultCaseDetailsRepositoryTest extends BaseTest {
         HashMap<String, String> searchParams = new HashMap<>();
         searchParams.put("PersonFirstName", "Janet");
         final List<CaseDetails> byMetaDataAndFieldData = caseDetailsRepository.findByMetaDataAndFieldData(metadata,
-                                                                                                          searchParams);
+            searchParams);
         assertAll(
             () -> assertThat(byMetaDataAndFieldData.size(), is(2)),
             () -> assertThat(byMetaDataAndFieldData.get(0).getId(), is("1")),
@@ -157,14 +319,14 @@ public class DefaultCaseDetailsRepositoryTest extends BaseTest {
 
 
     @Test
-    @Sql(executionPhase = Sql.ExecutionPhase.BEFORE_TEST_METHOD, scripts = { "classpath:sql/insert_cases.sql" })
+    @Sql(executionPhase = Sql.ExecutionPhase.BEFORE_TEST_METHOD, scripts = {"classpath:sql/insert_cases.sql"})
     public void getPaginatedSearchMetadataShouldReturnPaginationInfoWhenSearchedWithMetadata() {
         assumeDataInitialised();
 
         MetaData metadata = new MetaData("TestAddressBookCase", "PROBATE");
         metadata.setState(Optional.of("CaseCreated"));
         final PaginatedSearchMetadata paginatedSearchMetadata = caseDetailsRepository.getPaginatedSearchMetadata(metadata,
-                                                                                                                 new HashMap<>());
+            new HashMap<>());
         assertAll(
             () -> assertThat(paginatedSearchMetadata.getTotalResultsCount(), is(5)),
             () -> assertThat(paginatedSearchMetadata.getTotalPagesCount(), is(3))
@@ -172,7 +334,7 @@ public class DefaultCaseDetailsRepositoryTest extends BaseTest {
     }
 
     @Test
-    @Sql(executionPhase = Sql.ExecutionPhase.BEFORE_TEST_METHOD, scripts = { "classpath:sql/insert_cases.sql" })
+    @Sql(executionPhase = Sql.ExecutionPhase.BEFORE_TEST_METHOD, scripts = {"classpath:sql/insert_cases.sql"})
     public void getPaginatedSearchMetadataShouldReturnPaginationInfoWhenSearchedWithSearchParams() {
         assumeDataInitialised();
 
@@ -180,7 +342,7 @@ public class DefaultCaseDetailsRepositoryTest extends BaseTest {
         HashMap<String, String> searchParams = new HashMap<>();
         searchParams.put("PersonFirstName", "Janet");
         final PaginatedSearchMetadata paginatedSearchMetadata = caseDetailsRepository.getPaginatedSearchMetadata(metadata,
-                                                                                                                 searchParams);
+            searchParams);
         assertAll(
             () -> assertThat(paginatedSearchMetadata.getTotalResultsCount(), is(2)),
             () -> assertThat(paginatedSearchMetadata.getTotalPagesCount(), is(1))
@@ -195,13 +357,13 @@ public class DefaultCaseDetailsRepositoryTest extends BaseTest {
     }
 
     @Test
-    @Sql(executionPhase = Sql.ExecutionPhase.BEFORE_TEST_METHOD, scripts = { "classpath:sql/insert_cases.sql" })
+    @Sql(executionPhase = Sql.ExecutionPhase.BEFORE_TEST_METHOD, scripts = {"classpath:sql/insert_cases.sql"})
     public void searchWithParams_withAccessLevelAll() {
         MetaData metadata = new MetaData("TestAddressBookCase", "PROBATE");
         HashMap<String, String> searchParams = new HashMap<>();
         searchParams.put("PersonFirstName", "Janet");
 
-        final List<CaseDetails> results = caseDetailsRepository.findByMetaDataAndFieldData(metadata,searchParams);
+        final List<CaseDetails> results = caseDetailsRepository.findByMetaDataAndFieldData(metadata, searchParams);
 
         assertAll(
             () -> assertThat(results, hasSize(2)),
@@ -229,7 +391,7 @@ public class DefaultCaseDetailsRepositoryTest extends BaseTest {
         HashMap<String, String> searchParams = new HashMap<>();
         searchParams.put("PersonFirstName", "Janet");
 
-        final List<CaseDetails> results = caseDetailsRepository.findByMetaDataAndFieldData(metadata,searchParams);
+        final List<CaseDetails> results = caseDetailsRepository.findByMetaDataAndFieldData(metadata, searchParams);
 
         assertAll(
             () -> assertThat(results, hasSize(1)),
@@ -238,6 +400,23 @@ public class DefaultCaseDetailsRepositoryTest extends BaseTest {
                 hasProperty("reference", equalTo(1504254784737847L))
             )))
         );
+        assertThat(caseDetailsRepository.getPaginatedSearchMetadata(metadata, searchParams).getTotalResultsCount(), is(1));
+    }
+
+    @Test
+    @Sql(executionPhase = Sql.ExecutionPhase.BEFORE_TEST_METHOD, scripts = {
+        "classpath:sql/insert_cases.sql",
+        "classpath:sql/insert_case_with_restricted_state.sql"
+    })
+    public void searchWithParams_restrictedStates() {
+        when(authorisedCaseDefinitionDataService.getUserAuthorisedCaseStateIds("PROBATE", "TestAddressBookCase", CAN_READ))
+            .thenReturn(asList("CaseRestricted"));
+
+        MetaData metadata = new MetaData("TestAddressBookCase", "PROBATE");
+        final List<CaseDetails> results = caseDetailsRepository.findByMetaDataAndFieldData(metadata, Maps.newHashMap());
+
+        assertThat(results.size(), is(1));
+        assertThat(results.get(0).getReference(), is(1504254784737848L));
     }
 
     @Test

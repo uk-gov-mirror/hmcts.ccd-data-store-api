@@ -1,11 +1,11 @@
 package uk.gov.hmcts.ccd.datastore.tests.v2.external;
 
-import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.restassured.http.ContentType;
 import io.restassured.specification.RequestSpecification;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import uk.gov.hmcts.ccd.config.JacksonUtils;
 import uk.gov.hmcts.ccd.datastore.tests.AATHelper;
 import uk.gov.hmcts.ccd.datastore.tests.BaseTest;
 import uk.gov.hmcts.ccd.datastore.tests.fixture.AATCaseBuilder;
@@ -42,9 +42,9 @@ class CreateEventTest extends BaseTest {
     void shouldCreateEvent() {
         // Prepare new case in known state
         final Long caseReference = Event.create()
-                                        .as(asAutoTestCaseworker())
-                                        .withData(FullCase.build())
-                                        .submitAndGetReference();
+            .as(asAutoTestCaseworker())
+            .withData(FullCase.build())
+            .submitAndGetReference();
 
         String eventToken = aat.getCcdHelper().generateTokenUpdateCase(asAutoTestCaseworker(), JURISDICTION, CASE_TYPE, caseReference, UPDATE);
 
@@ -54,7 +54,7 @@ class CreateEventTest extends BaseTest {
 
             .then()
             .log().ifError()
-            .statusCode(200)
+            .statusCode(201)
             .assertThat()
 
             // Metadata
@@ -159,16 +159,6 @@ class CreateEventTest extends BaseTest {
             .withEventId(eventId)
             .withToken(eventToken)
             .toCaseDataContent();
-        return () -> MAPPER.convertValue(caseDataContent, JsonNode.class).toString();
-    }
-
-    private RequestSpecification callGetStartEventTrigger(String caseId, String eventTriggerId) {
-        return asAutoTestCaseworker(FALSE)
-            .get()
-            .given()
-            .pathParam("caseId", caseId)
-            .pathParam("triggerId", eventTriggerId)
-            .accept(V2.MediaType.START_EVENT_TRIGGER)
-            .header("experimental", "true");
+        return () -> JacksonUtils.convertValueJsonNode(caseDataContent).toString();
     }
 }

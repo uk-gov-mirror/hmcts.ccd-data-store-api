@@ -6,7 +6,7 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 import lombok.NonNull;
-import org.springframework.hateoas.ResourceSupport;
+import org.springframework.hateoas.RepresentationModel;
 import uk.gov.hmcts.ccd.data.casedetails.SecurityClassification;
 import uk.gov.hmcts.ccd.domain.model.callbacks.AfterSubmitCallbackResponse;
 import uk.gov.hmcts.ccd.domain.model.definition.CaseDetails;
@@ -17,13 +17,13 @@ import javax.validation.constraints.NotNull;
 import java.time.LocalDateTime;
 import java.util.Map;
 
-import static org.springframework.hateoas.mvc.ControllerLinkBuilder.linkTo;
-import static org.springframework.hateoas.mvc.ControllerLinkBuilder.methodOn;
+import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.linkTo;
+import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.methodOn;
 
 @Data
 @EqualsAndHashCode(callSuper = true)
 @NoArgsConstructor
-public class CaseResource extends ResourceSupport {
+public class CaseResource extends RepresentationModel {
 
     @JsonProperty("id")
     private String reference;
@@ -39,6 +39,9 @@ public class CaseResource extends ResourceSupport {
 
     @JsonProperty("last_modified_on")
     private LocalDateTime lastModifiedOn;
+
+    @JsonProperty("last_state_modified_on")
+    private LocalDateTime lastStateModifiedOn;
 
     @JsonProperty("state")
     private String state;
@@ -85,12 +88,19 @@ public class CaseResource extends ResourceSupport {
         add(linkTo(methodOn(CaseController.class).createEvent(reference, caseDataContent)).withSelfRel());
     }
 
+    public CaseResource(@NonNull CaseDetails caseDetails, @NotNull CaseDataContent caseDataContent, Boolean ignoreWarning) {
+        copyProperties(caseDetails);
+
+        add(linkTo(methodOn(CaseController.class).createCase(caseType, caseDataContent, ignoreWarning)).withSelfRel());
+    }
+
     private void copyProperties(CaseDetails caseDetails) {
         this.reference = caseDetails.getReference().toString();
         this.jurisdiction = caseDetails.getJurisdiction();
         this.caseType = caseDetails.getCaseTypeId();
         this.createdOn = caseDetails.getCreatedDate();
         this.lastModifiedOn = caseDetails.getLastModified();
+        this.lastStateModifiedOn = caseDetails.getLastStateModifiedDate();
         this.state = caseDetails.getState();
         this.securityClassification = caseDetails.getSecurityClassification();
         this.data = caseDetails.getData();

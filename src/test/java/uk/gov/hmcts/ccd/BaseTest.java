@@ -1,8 +1,6 @@
 package uk.gov.hmcts.ccd;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.type.TypeFactory;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
@@ -21,7 +19,9 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.context.junit4.SpringRunner;
 import org.springframework.test.util.ReflectionTestUtils;
+import uk.gov.hmcts.ccd.config.JacksonUtils;
 import uk.gov.hmcts.ccd.data.SecurityUtils;
+import uk.gov.hmcts.ccd.data.casedetails.CaseDetailsEntity;
 import uk.gov.hmcts.ccd.data.casedetails.SecurityClassification;
 import uk.gov.hmcts.ccd.data.definition.CaseDefinitionRepository;
 import uk.gov.hmcts.ccd.data.definition.DefaultCaseDefinitionRepository;
@@ -32,11 +32,16 @@ import uk.gov.hmcts.ccd.data.user.DefaultUserRepository;
 import uk.gov.hmcts.ccd.data.user.UserRepository;
 import uk.gov.hmcts.ccd.domain.model.callbacks.CallbackResponse;
 import uk.gov.hmcts.ccd.domain.model.callbacks.SignificantItem;
-import uk.gov.hmcts.ccd.domain.model.definition.*;
+import uk.gov.hmcts.ccd.domain.model.definition.CaseDetails;
+import uk.gov.hmcts.ccd.domain.model.definition.CaseEvent;
+import uk.gov.hmcts.ccd.domain.model.definition.CaseField;
+import uk.gov.hmcts.ccd.domain.model.definition.CaseType;
+import uk.gov.hmcts.ccd.domain.model.definition.Jurisdiction;
 import uk.gov.hmcts.ccd.domain.model.std.AuditEvent;
 import uk.gov.hmcts.ccd.domain.service.callbacks.CallbackService;
 import uk.gov.hmcts.ccd.domain.service.callbacks.EventTokenService;
 import uk.gov.hmcts.ccd.domain.service.common.UIDService;
+import uk.gov.hmcts.ccd.domain.service.stdapi.DocumentsOperation;
 import uk.gov.hmcts.ccd.domain.types.BaseType;
 import uk.gov.hmcts.ccd.domain.types.sanitiser.client.DocumentManagementRestClient;
 
@@ -47,22 +52,22 @@ import java.nio.charset.Charset;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Timestamp;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Scanner;
 
 import static org.junit.Assert.fail;
 import static org.mockito.Matchers.anyBoolean;
 import static org.mockito.Matchers.anyString;
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.reset;
+import static org.mockito.Mockito.when;
 
 @ActiveProfiles("test")
 @RunWith(SpringRunner.class)
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @TestPropertySource(locations = "classpath:test.properties")
 public abstract class BaseTest {
-    protected static final ObjectMapper mapper = new ObjectMapper();
-    protected static final TypeReference STRING_NODE_TYPE = new TypeReference<HashMap<String, JsonNode>>() {};
+    protected static final ObjectMapper mapper = JacksonUtils.MAPPER;
     protected static final Slf4jNotifier slf4jNotifier = new Slf4jNotifier(true);
 
     protected static final MediaType JSON_CONTENT_TYPE = new MediaType(
@@ -96,6 +101,8 @@ public abstract class BaseTest {
     private EventTokenService eventTokenService;
     @Inject
     private DocumentManagementRestClient documentManagementRestClient;
+    @Inject
+    private DocumentsOperation documentsOperation;
 
     @Before
     public void initMock() throws IOException {
@@ -110,6 +117,7 @@ public abstract class BaseTest {
         ReflectionTestUtils.setField(callbackService, "securityUtils", securityUtils);
         ReflectionTestUtils.setField(documentManagementRestClient, "securityUtils", securityUtils);
         ReflectionTestUtils.setField(draftGateway, "securityUtils", securityUtils);
+        ReflectionTestUtils.setField(documentsOperation, "securityUtils", securityUtils);
 
         // Reset static field `caseDefinitionRepository`
         ReflectionTestUtils.setField(BaseType.class, "caseDefinitionRepository", caseDefinitionRepository);
@@ -141,13 +149,13 @@ public abstract class BaseTest {
         jdbcTemplate.queryForList(
             "SELECT " +
                 "'TRUNCATE TABLE \"' || tablename || '\" CASCADE;' as truncate_statement " +
-            "FROM pg_tables " +
-            "WHERE schemaname = 'public' " +
-            "AND tablename NOT IN ('databasechangeloglock','databasechangelog')"
+                "FROM pg_tables " +
+                "WHERE schemaname = 'public' " +
+                "AND tablename NOT IN ('databasechangeloglock','databasechangelog')"
         ).stream()
             .map(resultRow -> resultRow.get("truncate_statement"))
             .forEach(truncateStatement ->
-                            jdbcTemplate.execute(truncateStatement.toString())
+                jdbcTemplate.execute(truncateStatement.toString())
             );
 
     }
@@ -167,20 +175,19 @@ public abstract class BaseTest {
         if (null != modifiedAt) {
             caseDetails.setLastModified(modifiedAt.toLocalDateTime());
         }
+        final Timestamp lastStateModified = resultSet.getTimestamp(CaseDetailsEntity.LAST_STATE_MODIFIED_DATE_FIELD_COL);
+        if (null != lastStateModified) {
+            caseDetails.setLastStateModifiedDate(lastStateModified.toLocalDateTime());
+        }
         try {
-            caseDetails.setData(mapper.convertValue(
-                mapper.readTree(resultSet.getString("data")),
-                STRING_NODE_TYPE));
+            caseDetails.setData(JacksonUtils.convertValue(mapper.readTree(resultSet.getString("data"))));
         } catch (IOException e) {
             fail("Incorrect JSON structure: " + resultSet.getString("data"));
         }
         final String dataClassification = resultSet.getString("data_classification");
         if (null != dataClassification) {
             try {
-                caseDetails.setDataClassification(mapper.convertValue(
-                    mapper.readTree(dataClassification),
-                    new TypeReference<HashMap<String, JsonNode>>() {
-                    }));
+                caseDetails.setDataClassification(JacksonUtils.convertValue(mapper.readTree(dataClassification)));
             } catch (IOException e) {
                 fail("Incorrect JSON structure: " + dataClassification);
             }
@@ -190,7 +197,7 @@ public abstract class BaseTest {
     }
 
     protected SignificantItem mapSignificantItem(ResultSet resultSet, Integer i) throws SQLException {
-        final SignificantItem  significantItem = new SignificantItem();
+        final SignificantItem significantItem = new SignificantItem();
 
         significantItem.setType(resultSet.getString("type"));
         significantItem.setDescription(resultSet.getString("description"));
@@ -220,9 +227,7 @@ public abstract class BaseTest {
         auditEvent.setSecurityClassification(SecurityClassification.valueOf(resultSet.getString("security_classification")));
 
         try {
-            auditEvent.setData(mapper.convertValue(
-                mapper.readTree(resultSet.getString("data")),
-                STRING_NODE_TYPE));
+            auditEvent.setData(JacksonUtils.convertValue(mapper.readTree(resultSet.getString("data"))));
         } catch (IOException e) {
             fail("Incorrect JSON structure: " + resultSet.getString("DATA"));
         }
@@ -230,10 +235,7 @@ public abstract class BaseTest {
         final String dataClassification = resultSet.getString("data_classification");
         if (null != dataClassification) {
             try {
-                auditEvent.setDataClassification(mapper.convertValue(
-                    mapper.readTree(dataClassification),
-                    new TypeReference<HashMap<String, JsonNode>>() {
-                    }));
+                auditEvent.setDataClassification(JacksonUtils.convertValue(mapper.readTree(dataClassification)));
             } catch (IOException e) {
                 fail("Incorrect JSON structure: " + dataClassification);
             }

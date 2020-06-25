@@ -4,12 +4,12 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import io.swagger.annotations.ApiModel;
 
 import java.io.Serializable;
+import java.util.Optional;
 
 @ApiModel(description = "")
 public class WizardPageComplexFieldOverride implements Serializable {
     private String complexFieldElementId;
     private String displayContext;
-    private Integer order;
     private String label;
     private String hintText;
     private String showCondition;
@@ -30,15 +30,6 @@ public class WizardPageComplexFieldOverride implements Serializable {
 
     public void setDisplayContext(String displayContext) {
         this.displayContext = displayContext;
-    }
-
-    @JsonProperty("order")
-    public Integer getOrder() {
-        return order;
-    }
-
-    public void setOrder(Integer order) {
-        this.order = order;
     }
 
     @JsonProperty("label")
@@ -66,5 +57,12 @@ public class WizardPageComplexFieldOverride implements Serializable {
 
     public void setShowCondition(String showCondition) {
         this.showCondition = showCondition;
+    }
+
+    public DisplayContext displayContextType() {
+        return Optional.ofNullable(getDisplayContext())
+            .filter(dc -> !dc.equals("HIDDEN"))
+            .map(DisplayContext::valueOf)
+            .orElse(null);
     }
 }

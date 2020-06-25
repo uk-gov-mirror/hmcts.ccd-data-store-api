@@ -5,6 +5,8 @@ import uk.gov.hmcts.ccd.data.definition.UIDefinitionRepository;
 import uk.gov.hmcts.ccd.domain.model.aggregated.CaseViewEvent;
 import uk.gov.hmcts.ccd.domain.model.aggregated.CaseViewField;
 import uk.gov.hmcts.ccd.domain.model.aggregated.CaseViewTab;
+import uk.gov.hmcts.ccd.domain.model.aggregated.CommonField;
+import uk.gov.hmcts.ccd.domain.model.aggregated.CompoundFieldOrderService;
 import uk.gov.hmcts.ccd.domain.model.definition.CaseDetails;
 import uk.gov.hmcts.ccd.domain.model.definition.CaseField;
 import uk.gov.hmcts.ccd.domain.model.definition.CaseTabCollection;
@@ -15,6 +17,7 @@ import uk.gov.hmcts.ccd.domain.service.common.ObjectMapperService;
 import uk.gov.hmcts.ccd.domain.service.common.UIDService;
 import uk.gov.hmcts.ccd.domain.service.getcase.CaseNotFoundException;
 import uk.gov.hmcts.ccd.domain.service.getcase.GetCaseOperation;
+import uk.gov.hmcts.ccd.domain.service.processor.FieldProcessorService;
 import uk.gov.hmcts.ccd.endpoint.exceptions.BadRequestException;
 
 import java.util.List;
@@ -33,17 +36,23 @@ public abstract class AbstractDefaultGetCaseViewOperation {
     private final CaseTypeService caseTypeService;
     private final UIDService uidService;
     private final ObjectMapperService objectMapperService;
+    private final CompoundFieldOrderService compoundFieldOrderService;
+    private final FieldProcessorService fieldProcessorService;
 
     AbstractDefaultGetCaseViewOperation(GetCaseOperation getCaseOperation,
                                         UIDefinitionRepository uiDefinitionRepository,
                                         CaseTypeService caseTypeService,
                                         UIDService uidService,
-                                        ObjectMapperService objectMapperService) {
+                                        ObjectMapperService objectMapperService,
+                                        CompoundFieldOrderService compoundFieldOrderService,
+                                        FieldProcessorService fieldProcessorService) {
         this.getCaseOperation = getCaseOperation;
         this.uiDefinitionRepository = uiDefinitionRepository;
         this.caseTypeService = caseTypeService;
         this.uidService = uidService;
         this.objectMapperService = objectMapperService;
+        this.compoundFieldOrderService = compoundFieldOrderService;
+        this.fieldProcessorService = fieldProcessorService;
     }
 
     void validateCaseReference(String caseReference) {
@@ -71,12 +80,12 @@ public abstract class AbstractDefaultGetCaseViewOperation {
 
     CaseViewTab[] getTabs(CaseDetails caseDetails, Map<String, ?> data, CaseTabCollection caseTabCollection) {
         return caseTabCollection.getTabs().stream().map(tab -> {
-            CaseViewField[] caseViewFields = tab.getTabFields().stream()
+            CommonField[] caseViewFields = tab.getTabFields().stream()
                 .filter(filterCaseTabFieldsBasedOnSecureData(caseDetails))
-                .map(field -> CaseViewField.createFrom(field, data))
+                .map(caseTypeTabField -> CaseViewField.createFrom(caseTypeTabField, data))
+                .map(fieldProcessorService::processCaseViewField)
                 .toArray(CaseViewField[]::new);
-
-            return new CaseViewTab(tab.getId(), tab.getLabel(), tab.getDisplayOrder(), caseViewFields,
+            return new CaseViewTab(tab.getId(), tab.getLabel(), tab.getDisplayOrder(), (CaseViewField[])caseViewFields,
                                    tab.getShowCondition(), tab.getRole());
 
         }).toArray(CaseViewTab[]::new);
