@@ -4,6 +4,10 @@
     <suppress>
         <notes>We do not use: Spring Framework 5.0.5.RELEASE + Spring Security (any version), see https://pivotal.io/security/cve-2018-1258</notes>
         <cve>CVE-2018-1258</cve>
+        <cve>CVE-2020-10517</cve>
+        <cve>CVE-2020-7019</cve>
+        <cve>CVE-2020-10518</cve>
+        <cve>CVE-2017-18640</cve>
     </suppress>
 
     <!-- THIS CVEs should not be removed until the elastic search client is updated to 7.
@@ -207,6 +211,7 @@
    ]]></notes>
    <packageUrl regex="true">^pkg:maven/org\.elasticsearch/elasticsearch@.*$</packageUrl>
    <vulnerabilityName>CVE-2018-17244</vulnerabilityName>
+   <vulnerabilityName>CVE-2020-7019</vulnerabilityName>
 </suppress>
     <suppress>
    <notes><![CDATA[
