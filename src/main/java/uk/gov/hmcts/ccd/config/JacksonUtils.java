@@ -11,7 +11,11 @@ import com.fasterxml.jackson.databind.json.JsonMapper;
 import java.util.HashMap;
 
 
-public class JacksonUtils {
+public final class JacksonUtils {
+
+    private JacksonUtils(){
+
+    }
 
     public static final JsonFactory jsonFactory = JsonFactory.builder()
         // Change per-factory setting to prevent use of `String.intern()` on symbols
@@ -37,5 +41,10 @@ public class JacksonUtils {
     public static final TypeReference<HashMap<String, JsonNode>> getHashMapTypeReference() {
         return new TypeReference<HashMap<String, JsonNode>>() {
         };
+    }
+
+    public static HashMap<String, Object> convertJsonNode(Object from) {
+        return MAPPER.convertValue(from, new TypeReference<HashMap<String, Object>>() {
+        });
     }
 }
