@@ -1,0 +1,88 @@
+{
+  "_guid_": "F-115_Base_Test_Data",
+
+  "productName": "CCD Data Store",
+  "operationName": "Start Case Trigger",
+
+  "method": "GET",
+  "uri": "/internal/case-types/{caseTypeId}/event-triggers/{triggerId}",
+
+  "user": {
+    "username": "master.caseworker@gmail.com",
+    "password": "[[$CCD_BEFTA_MASTER_CASEWORKER_PWD]]"  },
+
+  "request": {
+    "_extends_": "Common_Request",
+    "headers": {
+      "experimental": "true"
+    },
+    "pathVariables": {
+      "caseTypeId": "FT_ComplexCollectionComplex",
+      "triggerId": "createCase"
+    }
+  },
+
+  "expectedResponse" : {
+    "_extends_": "Common_200_Response",
+    "headers" : {
+      "Content-Type": "application/vnd.uk.gov.hmcts.ccd-data-store-api.ui-start-case-trigger.v2+json;charset=UTF-8"
+    },
+    "body": {
+      "id": "createCase",
+      "name": "Create a case",
+      "description": "Create a case",
+      "case_id": null,
+      "event_token": "[[ANYTHING_PRESENT]]",
+      "wizard_pages": [
+        {
+          "id": "createCaseMuliFormPage1",
+          "label": "Family Details Page 1/2",
+          "order": 1,
+          "wizard_page_fields": [
+            {
+              "case_field_id": "FamilyDetails",
+              "order": 1,
+              "page_column_no": null,
+              "complex_field_overrides": []
+            },
+            {
+              "case_field_id": "Homeless",
+              "order": 1,
+              "page_column_no": null,
+              "complex_field_overrides": []
+            }
+          ],
+          "show_condition": null,
+          "callback_url_mid_event": null,
+          "retries_timeout_mid_event": []
+        },
+        {
+          "id": "createCaseMuliFormPage2",
+          "label": "Family Details Page 2",
+          "order": 2,
+          "wizard_page_fields": [
+            {
+              "case_field_id": "Children",
+              "order": 1,
+              "page_column_no": null,
+              "complex_field_overrides": []
+            }
+          ],
+          "show_condition": null,
+          "callback_url_mid_event": null,
+          "retries_timeout_mid_event": []
+        }
+      ],
+      "show_summary": true,
+      "show_event_notes": null,
+      "end_button_label": null,
+      "can_save_draft": null,
+      "_links": {
+        "self": {
+          "href": "[[ANYTHING_PRESENT]]"
+        }
+      }
+    }
+
+  }
+}
