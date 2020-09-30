@@ -198,6 +198,7 @@ public class ApplicationParams {
         return caseDefinitionHost + "/api/data/case-type/" + encode(caseTypeId) + "/version";
     }
 
+
     public String userRoleClassification() {
         return caseDefinitionHost + "/api/user-role?role={userRole}";
     }
@@ -228,6 +229,10 @@ public class ApplicationParams {
 
     public String jurisdictionDefURL() {
         return caseDefinitionHost + "/api/data/jurisdictions";
+    }
+
+    public String findCasesReferencesByJurisdictionsUrl() {
+        return caseDefinitionHost + "/api/data/jurisdictions/case-types";
     }
 
     public String bannersURL() {

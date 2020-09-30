@@ -1,7 +1,5 @@
 package uk.gov.hmcts.ccd.data.definition;
 
-import static uk.gov.hmcts.ccd.ApplicationParams.encodeBase64;
-
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -15,27 +13,17 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
-
-import javax.inject.Inject;
-
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.stream.Collectors;
-
 import uk.gov.hmcts.ccd.ApplicationParams;
 import uk.gov.hmcts.ccd.data.SecurityUtils;
-import uk.gov.hmcts.ccd.domain.model.definition.CaseFieldDefinition;
-import uk.gov.hmcts.ccd.domain.model.definition.CaseTypeDefinition;
-import uk.gov.hmcts.ccd.domain.model.definition.FieldTypeDefinition;
-import uk.gov.hmcts.ccd.domain.model.definition.JurisdictionDefinition;
-import uk.gov.hmcts.ccd.domain.model.definition.UserRole;
+import uk.gov.hmcts.ccd.domain.model.definition.*;
 import uk.gov.hmcts.ccd.endpoint.exceptions.ResourceNotFoundException;
 import uk.gov.hmcts.ccd.endpoint.exceptions.ServiceException;
+
+import javax.inject.Inject;
+import java.util.*;
+import java.util.stream.Collectors;
+
+import static uk.gov.hmcts.ccd.ApplicationParams.encodeBase64;
 
 @SuppressWarnings("checkstyle:SummaryJavadoc")
 // partial javadoc attributes added prior to checkstyle implementation in module
@@ -224,15 +212,31 @@ public class DefaultCaseDefinitionRepository implements CaseDefinitionRepository
 
     @Override
     public List<String> getCaseTypesIDsByJurisdictions(List<String> jurisdictionIds) {
-
-        List<JurisdictionDefinition> jurisdictionDefinitions = getJurisdictionsFromDefinitionStore(
-                Optional.of(jurisdictionIds));
-        if (jurisdictionDefinitions.isEmpty()) {
-            LOG.warn("Definitions not found for requested jurisdictions {}", jurisdictionIds);
-            return Collections.emptyList();
+        try {
+            UriComponentsBuilder builder = UriComponentsBuilder.fromHttpUrl(applicationParams.findCasesReferencesByJurisdictionsUrl());
+            builder.queryParam("ids", String.join(",", jurisdictionIds));
+            HttpEntity<List<String>> requestEntity = new HttpEntity<>(securityUtils.authorizationHeaders());
+            List<String> casesTypes = restTemplate.exchange(
+                builder.build().encode().toUri(),
+                HttpMethod.GET, requestEntity,
+                new ParameterizedTypeReference<List<String>>() {
+                }
+            ).getBody();
+            if (casesTypes == null) {
+                casesTypes = Collections.emptyList();
+            }
+            LOG.debug("Retrieved all cases types references by jurisdictionIds from definition store: {}.", jurisdictionIds);
+            return casesTypes;
+        } catch (Exception exception) {
+            LOG.warn("Error while retrieving  case types references definition", exception);
+            if (exception instanceof HttpClientErrorException
+                && ((HttpClientErrorException) exception).getRawStatusCode() == RESOURCE_NOT_FOUND) {
+                LOG.warn("Cases types references couldn't be found on definition store for jurisdiction: {}.", jurisdictionIds);
+                return new ArrayList<>();
+            } else {
+                throw new ServiceException("Problem retrieving jurisdictions definition because of " + exception.getMessage());
+            }
         }
-        List<String> caseTypes = getCaseTypeIdFromJurisdictionDefinition(jurisdictionDefinitions);
-        return caseTypes;
     }
 
     @Override
