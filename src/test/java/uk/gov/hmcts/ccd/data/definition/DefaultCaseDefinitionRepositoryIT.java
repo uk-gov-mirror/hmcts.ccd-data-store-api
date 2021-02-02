@@ -1,11 +1,9 @@
 package uk.gov.hmcts.ccd.data.definition;
 
 import com.github.tomakehurst.wiremock.client.WireMock;
-import com.github.tomakehurst.wiremock.stubbing.StubMapping;
 import org.hamcrest.collection.IsCollectionWithSize;
 import org.junit.Assert;
 import org.junit.Test;
-import org.junit.jupiter.api.AfterEach;
 import uk.gov.hmcts.ccd.WireMockBaseTest;
 import uk.gov.hmcts.ccd.domain.model.definition.CaseTypeDefinition;
 import uk.gov.hmcts.ccd.domain.model.definition.FieldTypeDefinition;
@@ -18,11 +16,14 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
 
-import static com.github.tomakehurst.wiremock.client.WireMock.*;
+import static com.github.tomakehurst.wiremock.client.WireMock.serverError;
+import static com.github.tomakehurst.wiremock.client.WireMock.urlMatching;
 import static com.google.common.collect.Lists.newArrayList;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.*;
+import static org.hamcrest.Matchers.hasItem;
+import static org.hamcrest.Matchers.hasSize;
+import static org.hamcrest.Matchers.nullValue;
 import static org.hamcrest.beans.HasPropertyWithValue.hasProperty;
 import static org.hamcrest.core.StringStartsWith.startsWith;
 import static org.junit.Assert.assertEquals;
@@ -34,27 +35,19 @@ import static uk.gov.hmcts.ccd.domain.model.definition.FieldTypeDefinition.COMPL
 
 public class DefaultCaseDefinitionRepositoryIT extends WireMockBaseTest {
     @Inject
-    private CaseDefinitionRepository caseDefinitionRepository;
-
-    private StubMapping stubMapping;
-
-    @AfterEach
-    public void tearDown() {
-        if (stubMapping != null) {
-            removeStub(stubMapping);
-        }
-    }
+    private uk.gov.hmcts.ccd.data.definition.CaseDefinitionRepository caseDefinitionRepository;
 
     @Test
     public void shouldGetCaseTypesForJurisdiction() {
-        final List<CaseTypeDefinition> caseTypeDefinitions = caseDefinitionRepository.getCaseTypesForJurisdiction("probate");
+        final List<CaseTypeDefinition> caseTypeDefinitions =
+            caseDefinitionRepository.getCaseTypesForJurisdiction("probate");
         assertEquals("HTTP call results failed", 2, caseTypeDefinitions.size());
-
     }
 
     @Test
     public void shouldGetCaseType() {
-        final CaseTypeDefinition caseTypeDefinition = caseDefinitionRepository.getCaseType("TestAddressBookCase");
+        final CaseTypeDefinition caseTypeDefinition =
+            caseDefinitionRepository.getCaseType("TestAddressBookCase");
         assertEquals("Incorrect Case Type", "TestAddressBookCase", caseTypeDefinition.getId());
     }
 
@@ -117,7 +110,8 @@ public class DefaultCaseDefinitionRepositoryIT extends WireMockBaseTest {
 
     @Test
     public void shouldGetJurisdictionsDefinition() {
-        List<JurisdictionDefinition> allJurisdictionDefinitions = newArrayList("PROBATE", "DIVORCE", "SSCS").stream()
+        List<JurisdictionDefinition> allJurisdictionDefinitions =
+            newArrayList("PROBATE", "DIVORCE", "SSCS").stream()
                 .map(id -> caseDefinitionRepository.getJurisdiction(id)).collect(Collectors.toList());
 
         assertAll(
@@ -129,15 +123,16 @@ public class DefaultCaseDefinitionRepositoryIT extends WireMockBaseTest {
 
     @Test
     public void shouldFailToGetCaseTypesForJurisdiction() {
-        stubMapping = stubFor(WireMock.get(urlMatching("/api/data/jurisdictions/server_error/case-type")).willReturn(serverError()));
+        stubFor(WireMock.get(urlMatching("/api/data/jurisdictions/server_error/case-type")).willReturn(serverError()));
         final ServiceException exception = assertThrows(ServiceException.class,
             () -> caseDefinitionRepository.getCaseTypesForJurisdiction("server_error"));
-        assertThat(exception.getMessage(), startsWith("Problem getting case types for the Jurisdiction:server_error because of "));
+        assertThat(exception.getMessage(), startsWith("Problem getting case types for the Jurisdiction:server_error "
+            + "because of "));
     }
 
     @Test
     public void shouldFailToGetCaseType() {
-        stubMapping = stubFor(WireMock.get(urlMatching("/api/data/case-type/anything")).willReturn(serverError()));
+        stubFor(WireMock.get(urlMatching("/api/data/case-type/anything")).willReturn(serverError()));
         final ServiceException exception = assertThrows(ServiceException.class,
             () -> caseDefinitionRepository.getCaseType("anything"));
         assertThat(exception.getMessage(), startsWith("Problem getting case type definition for anything because of "));
@@ -146,16 +141,18 @@ public class DefaultCaseDefinitionRepositoryIT extends WireMockBaseTest {
     @Test
     public void shouldFailToGetBaseTypes() {
         when(caseDefinitionRepository.getBaseTypes()).thenCallRealMethod();
-        stubMapping = stubFor(WireMock.get(urlMatching("/api/base-types")).willReturn(serverError()));
+        stubFor(WireMock.get(urlMatching("/api/base-types")).willReturn(serverError()));
         final ServiceException exception = assertThrows(ServiceException.class,
             () -> caseDefinitionRepository.getBaseTypes());
-        assertThat(exception.getMessage(), startsWith("Problem getting base types definition from definition store because of "));
+        assertThat(exception.getMessage(), startsWith("Problem getting base types definition from definition store "
+            + "because of "));
     }
 
     @Test
     public void shouldFailToGetClassificationsForUserRoleList() {
         List<String> userRoles = Arrays.asList("neither_defined", "nor_defined");
-        stubMapping = stubFor(WireMock.get(urlMatching("/api/user-roles/neither_defined,nor_defined")).willReturn(serverError()));
+        stubFor(WireMock.get(urlMatching("/api/user-roles/neither_defined,nor_defined"))
+            .willReturn(serverError()));
         final ServiceException exception = assertThrows(ServiceException.class,
             () -> caseDefinitionRepository.getClassificationsForUserRoleList(userRoles));
         Assert.assertThat(exception.getMessage(),

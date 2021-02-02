@@ -1,8 +1,6 @@
 package uk.gov.hmcts.ccd.endpoint.ui;
 
 import com.github.tomakehurst.wiremock.client.WireMock;
-import com.github.tomakehurst.wiremock.stubbing.StubMapping;
-import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.springframework.test.context.jdbc.Sql;
@@ -22,8 +20,6 @@ import java.util.List;
 import java.util.Map;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.okJson;
-import static com.github.tomakehurst.wiremock.client.WireMock.removeStub;
-import static com.github.tomakehurst.wiremock.client.WireMock.stubFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlMatching;
 import static org.junit.Assert.assertEquals;
 import static org.springframework.http.HttpHeaders.AUTHORIZATION;
@@ -36,7 +32,8 @@ import static uk.gov.hmcts.ccd.domain.service.aggregated.SearchQueryOperation.WO
 
 public class SearchWithSortIT extends WireMockBaseTest {
 
-    private static final String GET_CASES = "/aggregated/caseworkers/0/jurisdictions/PROBATE/case-types/TestAddressBookCase/cases";
+    private static final String GET_CASES =
+        "/aggregated/caseworkers/0/jurisdictions/PROBATE/case-types/TestAddressBookCase/cases";
 
     private static final String TEST_CASE_TYPE = "TestAddressBookCase";
     private static final String TEST_JURISDICTION = "PROBATE";
@@ -47,7 +44,6 @@ public class SearchWithSortIT extends WireMockBaseTest {
     @Inject
     private ApplicationParams applicationParams;
     private MockMvc mockMvc;
-    private StubMapping stubMapping;
 
     @Before
     public void setUp() {
@@ -57,16 +53,13 @@ public class SearchWithSortIT extends WireMockBaseTest {
 
         ReflectionTestUtils.setField(applicationParams, "paginationPageSize", 3);
 
-        stubMapping  = stubFor(WireMock.get(urlMatching("/api/data/case-type/TestAddressBookCase/version")).willReturn(okJson("{\"version\": \"34\"}")));
-    }
-
-    @After
-    public void tearDown() {
-        removeStub(stubMapping);
+        stubFor(WireMock.get(urlMatching("/api/data/case-type/TestAddressBookCase/version"))
+            .willReturn(okJson("{\"version\": \"34\"}")));
     }
 
     @Test
-    @Sql(executionPhase = Sql.ExecutionPhase.BEFORE_TEST_METHOD, scripts = {"classpath:sql/insert_search_sort_cases.sql"})
+    @Sql(executionPhase = Sql.ExecutionPhase.BEFORE_TEST_METHOD,
+        scripts = {"classpath:sql/insert_search_sort_cases.sql"})
     public void workbasketSearchWithSortOrder() throws Exception {
         MvcResult result = mockMvc.perform(get(GET_CASES)
             .contentType(JSON_CONTENT_TYPE)
@@ -97,10 +90,12 @@ public class SearchWithSortIT extends WireMockBaseTest {
     }
 
     @Test
-    @Sql(executionPhase = Sql.ExecutionPhase.BEFORE_TEST_METHOD, scripts = {"classpath:sql/insert_search_sort_cases.sql"})
+    @Sql(executionPhase = Sql.ExecutionPhase.BEFORE_TEST_METHOD,
+        scripts = {"classpath:sql/insert_search_sort_cases.sql"})
     public void workbasketSearchWithRoleSpecificSortOrder() throws Exception {
         String roleWithSortOrder = ROLE_TEST_PUBLIC;
-        MockUtils.setSecurityAuthorities(authentication, roleWithSortOrder, ROLE_CASEWORKER_PUBLIC, ROLE_CASEWORKER_PRIVATE);
+        MockUtils.setSecurityAuthorities(authentication, roleWithSortOrder, ROLE_CASEWORKER_PUBLIC,
+            ROLE_CASEWORKER_PRIVATE);
         MvcResult result = mockMvc.perform(get(GET_CASES)
             .contentType(JSON_CONTENT_TYPE)
             .param("view", WORKBASKET)

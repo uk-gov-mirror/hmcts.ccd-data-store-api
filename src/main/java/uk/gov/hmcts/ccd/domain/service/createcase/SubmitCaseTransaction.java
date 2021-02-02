@@ -19,6 +19,8 @@ import uk.gov.hmcts.ccd.domain.model.std.Event;
 import uk.gov.hmcts.ccd.domain.service.common.CaseTypeService;
 import uk.gov.hmcts.ccd.domain.service.common.SecurityClassificationService;
 import uk.gov.hmcts.ccd.domain.service.common.UIDService;
+import uk.gov.hmcts.ccd.domain.service.message.MessageContext;
+import uk.gov.hmcts.ccd.domain.service.message.MessageService;
 import uk.gov.hmcts.ccd.domain.service.stdapi.AboutToSubmitCallbackResponse;
 import uk.gov.hmcts.ccd.domain.service.stdapi.CallbackInvoker;
 import uk.gov.hmcts.ccd.endpoint.exceptions.ReferenceKeyUniqueConstraintException;
@@ -44,16 +46,20 @@ class SubmitCaseTransaction {
     private final SecurityClassificationService securityClassificationService;
     private final CaseUserRepository caseUserRepository;
     private final UserAuthorisation userAuthorisation;
+    private final MessageService messageService;
 
     @Inject
-    public SubmitCaseTransaction(@Qualifier(CachedCaseDetailsRepository.QUALIFIER) final CaseDetailsRepository caseDetailsRepository,
+    public SubmitCaseTransaction(@Qualifier(CachedCaseDetailsRepository.QUALIFIER)
+                                     final CaseDetailsRepository caseDetailsRepository,
                                  final CaseAuditEventRepository caseAuditEventRepository,
                                  final CaseTypeService caseTypeService,
                                  final CallbackInvoker callbackInvoker,
                                  final UIDService uidService,
                                  final SecurityClassificationService securityClassificationService,
-                                 final @Qualifier(CachedCaseUserRepository.QUALIFIER)  CaseUserRepository caseUserRepository,
-                                 final UserAuthorisation userAuthorisation
+                                 final @Qualifier(CachedCaseUserRepository.QUALIFIER)
+                                         CaseUserRepository caseUserRepository,
+                                 final UserAuthorisation userAuthorisation,
+                                 final @Qualifier("caseEventMessageService") MessageService messageService
                                  ) {
         this.caseDetailsRepository = caseDetailsRepository;
         this.caseAuditEventRepository = caseAuditEventRepository;
@@ -63,6 +69,7 @@ class SubmitCaseTransaction {
         this.securityClassificationService = securityClassificationService;
         this.caseUserRepository = caseUserRepository;
         this.userAuthorisation = userAuthorisation;
+        this.messageService = messageService;
     }
 
     @Transactional(REQUIRES_NEW)
@@ -87,13 +94,16 @@ class SubmitCaseTransaction {
             About to submit
 
             TODO: Ideally, the callback should be outside of the transaction. However, it requires the case UID to have
-            been assigned and the UID generation has to be part of a retryable transaction in order to recover from collisions.
+            been assigned and the UID generation has to be part of a retryable transaction in order to recover from
+            collisions.
          */
         AboutToSubmitCallbackResponse aboutToSubmitCallbackResponse =
-            callbackInvoker.invokeAboutToSubmitCallback(caseEventDefinition, null, newCaseDetails, caseTypeDefinition, ignoreWarning);
+            callbackInvoker.invokeAboutToSubmitCallback(caseEventDefinition, null, newCaseDetails,
+                caseTypeDefinition, ignoreWarning);
 
         final CaseDetails savedCaseDetails =
-            saveAuditEventForCaseDetails(aboutToSubmitCallbackResponse, event, caseTypeDefinition, idamUser, caseEventDefinition, newCaseDetails);
+            saveAuditEventForCaseDetails(aboutToSubmitCallbackResponse, event, caseTypeDefinition, idamUser,
+                caseEventDefinition, newCaseDetails);
 
         if (AccessLevel.GRANTED.equals(userAuthorisation.getAccessLevel())) {
             caseUserRepository.grantAccess(Long.valueOf(savedCaseDetails.getId()),
@@ -120,7 +130,8 @@ class SubmitCaseTransaction {
         auditEvent.setCaseDataId(savedCaseDetails.getId());
         auditEvent.setData(savedCaseDetails.getData());
         auditEvent.setStateId(savedCaseDetails.getState());
-        CaseStateDefinition caseStateDefinition = caseTypeService.findState(caseTypeDefinition, savedCaseDetails.getState());
+        CaseStateDefinition caseStateDefinition =
+            caseTypeService.findState(caseTypeDefinition, savedCaseDetails.getState());
         auditEvent.setStateName(caseStateDefinition.getName());
         auditEvent.setCaseTypeId(caseTypeDefinition.getId());
         auditEvent.setCaseTypeVersion(caseTypeDefinition.getVersion().getNumber());
@@ -128,11 +139,18 @@ class SubmitCaseTransaction {
         auditEvent.setUserLastName(idamUser.getSurname());
         auditEvent.setUserFirstName(idamUser.getForename());
         auditEvent.setCreatedDate(newCaseDetails.getCreatedDate());
-        auditEvent.setSecurityClassification(securityClassificationService.getClassificationForEvent(caseTypeDefinition, caseEventDefinition));
+        auditEvent.setSecurityClassification(securityClassificationService.getClassificationForEvent(caseTypeDefinition,
+            caseEventDefinition));
         auditEvent.setDataClassification(savedCaseDetails.getDataClassification());
         auditEvent.setSignificantItem(response.getSignificantItem());
 
         caseAuditEventRepository.set(auditEvent);
+
+        messageService.handleMessage(MessageContext.builder()
+            .caseDetails(savedCaseDetails)
+            .caseTypeDefinition(caseTypeDefinition)
+            .caseEventDefinition(caseEventDefinition)
+            .oldState(null).build());
         return savedCaseDetails;
     }
 

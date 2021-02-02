@@ -1,33 +1,36 @@
 package uk.gov.hmcts.ccd.integrations;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.concurrent.TimeUnit;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.Mock;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.boot.test.mock.mockito.SpyBean;
 import org.springframework.cloud.contract.wiremock.AutoConfigureWireMock;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.context.junit4.SpringRunner;
-import org.springframework.web.client.RestTemplate;
 import uk.gov.hmcts.ccd.ApplicationParams;
-import uk.gov.hmcts.ccd.data.SecurityUtils;
 import uk.gov.hmcts.ccd.data.definition.CachedCaseDefinitionRepository;
 import uk.gov.hmcts.ccd.data.definition.CaseTypeDefinitionVersion;
 import uk.gov.hmcts.ccd.data.definition.DefaultCaseDefinitionRepository;
 import uk.gov.hmcts.ccd.data.definition.HttpUIDefinitionGateway;
 import uk.gov.hmcts.ccd.data.definition.UIDefinitionRepository;
-import uk.gov.hmcts.ccd.data.user.DefaultUserRepository;
-import uk.gov.hmcts.ccd.domain.model.definition.*;
+import uk.gov.hmcts.ccd.domain.model.definition.Banner;
+import uk.gov.hmcts.ccd.domain.model.definition.BannersResult;
+import uk.gov.hmcts.ccd.domain.model.definition.CaseTypeDefinition;
+import uk.gov.hmcts.ccd.domain.model.definition.CaseTypeTabsDefinition;
+import uk.gov.hmcts.ccd.domain.model.definition.JurisdictionDefinition;
+import uk.gov.hmcts.ccd.domain.model.definition.SearchInputFieldsDefinition;
 import uk.gov.hmcts.ccd.domain.model.definition.SearchResultDefinition;
+import uk.gov.hmcts.ccd.domain.model.definition.WizardPage;
+import uk.gov.hmcts.ccd.domain.model.definition.WorkbasketInputFieldsDefinition;
+
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.times;
@@ -36,7 +39,7 @@ import static org.mockito.Mockito.verify;
 @RunWith(SpringRunner.class)
 @SpringBootTest
 @AutoConfigureWireMock(port = 0)
-@TestPropertySource(locations = "classpath:integration_tests.properties")
+@TestPropertySource(locations = "classpath:test.properties")
 public class DefinitionsCachingIT {
 
     private static final String ID_1 = "case1";
@@ -81,15 +84,6 @@ public class DefinitionsCachingIT {
     @Mock
     SearchInputFieldsDefinition searchInputFieldsDefinition;
 
-    @SpyBean
-    private DefaultUserRepository userRepository;
-
-    @MockBean
-    @Qualifier("restTemplate")
-    private RestTemplate restTemplate;
-
-    @MockBean
-    private SecurityUtils securityUtils;
 
     List<WizardPage> wizardPageList = Collections.emptyList();
 
@@ -97,12 +91,18 @@ public class DefinitionsCachingIT {
 
     @Before
     public void setup() {
-        doReturn(caseTypeDefinitionVersion(VERSION_1)).when(this.caseDefinitionRepository).getLatestVersionFromDefinitionStore(ID_1);
-        doReturn(caseTypeDefinitionVersion(VERSION_2)).when(this.caseDefinitionRepository).getLatestVersionFromDefinitionStore(ID_2);
-        doReturn(caseTypeDefinitionVersion(VERSION_3)).when(this.caseDefinitionRepository).getLatestVersionFromDefinitionStore(ID_3);
-        doReturn(JURISDICTION_DEFINITION_1).when(this.caseDefinitionRepository).getJurisdictionFromDefinitionStore("J1");
-        doReturn(JURISDICTION_DEFINITION_2).when(this.caseDefinitionRepository).getJurisdictionFromDefinitionStore("J2");
-        doReturn(JURISDICTION_DEFINITION_3).when(this.caseDefinitionRepository).getJurisdictionFromDefinitionStore("J3");
+        doReturn(caseTypeDefinitionVersion(VERSION_1)).when(this.caseDefinitionRepository)
+            .getLatestVersionFromDefinitionStore(ID_1);
+        doReturn(caseTypeDefinitionVersion(VERSION_2)).when(this.caseDefinitionRepository)
+            .getLatestVersionFromDefinitionStore(ID_2);
+        doReturn(caseTypeDefinitionVersion(VERSION_3)).when(this.caseDefinitionRepository)
+            .getLatestVersionFromDefinitionStore(ID_3);
+        doReturn(JURISDICTION_DEFINITION_1).when(this.caseDefinitionRepository)
+            .getJurisdictionFromDefinitionStore("J1");
+        doReturn(JURISDICTION_DEFINITION_2).when(this.caseDefinitionRepository)
+            .getJurisdictionFromDefinitionStore("J2");
+        doReturn(JURISDICTION_DEFINITION_3).when(this.caseDefinitionRepository)
+            .getJurisdictionFromDefinitionStore("J3");
         doReturn(mockCaseTypeDefinition).when(this.caseDefinitionRepository).getCaseType(ID_1);
     }
 
@@ -209,7 +209,8 @@ public class DefinitionsCachingIT {
     @Test
     public void testWorkbasketInputDefinitionsAreCached() {
 
-        doReturn(workbasketInputFieldsDefinition).when(this.httpUIDefinitionGateway).getWorkbasketInputFieldsDefinitions(VERSION_1, ID_1);
+        doReturn(workbasketInputFieldsDefinition).when(this.httpUIDefinitionGateway)
+            .getWorkbasketInputFieldsDefinitions(VERSION_1, ID_1);
 
         uiDefinitionRepository.getWorkbasketInputDefinitions(ID_1);
         uiDefinitionRepository.getWorkbasketInputDefinitions(ID_1);
@@ -257,7 +258,8 @@ public class DefinitionsCachingIT {
     @Test
     public void testSearchInputDefinitionsAreCached() {
 
-        doReturn(searchInputFieldsDefinition).when(this.httpUIDefinitionGateway).getSearchInputFieldDefinitions(VERSION_1, ID_1);
+        doReturn(searchInputFieldsDefinition).when(this.httpUIDefinitionGateway)
+            .getSearchInputFieldDefinitions(VERSION_1, ID_1);
 
         uiDefinitionRepository.getSearchInputFieldDefinitions(ID_1);
         uiDefinitionRepository.getSearchInputFieldDefinitions(ID_1);

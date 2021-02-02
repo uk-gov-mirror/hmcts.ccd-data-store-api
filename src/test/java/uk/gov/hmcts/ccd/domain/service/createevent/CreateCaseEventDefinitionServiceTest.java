@@ -1,13 +1,6 @@
 package uk.gov.hmcts.ccd.domain.service.createevent;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import java.time.Clock;
-import java.time.Instant;
-import java.time.LocalDateTime;
-import java.time.ZoneOffset;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -25,23 +18,36 @@ import uk.gov.hmcts.ccd.domain.model.definition.CaseDetails;
 import uk.gov.hmcts.ccd.domain.model.definition.CaseEventDefinition;
 import uk.gov.hmcts.ccd.domain.model.definition.CaseStateDefinition;
 import uk.gov.hmcts.ccd.domain.model.definition.CaseTypeDefinition;
+import uk.gov.hmcts.ccd.domain.model.definition.EventPostStateDefinition;
 import uk.gov.hmcts.ccd.domain.model.definition.JurisdictionDefinition;
 import uk.gov.hmcts.ccd.domain.model.definition.Version;
 import uk.gov.hmcts.ccd.domain.model.std.CaseDataContent;
 import uk.gov.hmcts.ccd.domain.model.std.Event;
 import uk.gov.hmcts.ccd.domain.service.callbacks.EventTokenService;
 import uk.gov.hmcts.ccd.domain.service.common.CaseDataService;
+import uk.gov.hmcts.ccd.domain.service.common.CasePostStateService;
 import uk.gov.hmcts.ccd.domain.service.common.CaseService;
 import uk.gov.hmcts.ccd.domain.service.common.CaseTypeService;
 import uk.gov.hmcts.ccd.domain.service.common.EventTriggerService;
 import uk.gov.hmcts.ccd.domain.service.common.SecurityClassificationService;
 import uk.gov.hmcts.ccd.domain.service.common.UIDService;
+import uk.gov.hmcts.ccd.domain.service.message.CaseEventMessageService;
 import uk.gov.hmcts.ccd.domain.service.processor.FieldProcessorService;
 import uk.gov.hmcts.ccd.domain.service.stdapi.AboutToSubmitCallbackResponse;
 import uk.gov.hmcts.ccd.domain.service.stdapi.CallbackInvoker;
 import uk.gov.hmcts.ccd.domain.service.validate.ValidateCaseFieldsOperation;
 import uk.gov.hmcts.ccd.domain.types.sanitiser.CaseSanitiser;
 import uk.gov.hmcts.ccd.infrastructure.user.UserAuthorisation;
+
+import java.time.Clock;
+import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.ZoneOffset;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.BDDMockito.given;
@@ -99,6 +105,10 @@ class CreateCaseEventDefinitionServiceTest {
     private FieldProcessorService fieldProcessorService;
     @Mock
     private Clock clock;
+    @Mock
+    private CasePostStateService casePostStateService;
+    @Mock
+    private CaseEventMessageService caseEventMessageService;
 
     private Clock fixedClock = Clock.fixed(Instant.parse("2018-08-19T16:02:42.00Z"), ZoneOffset.UTC);
 
@@ -129,7 +139,8 @@ class CreateCaseEventDefinitionServiceTest {
 
         event = buildEvent();
         data = buildJsonNodeData();
-        caseDataContent = newCaseDataContent().withEvent(event).withData(data).withToken(TOKEN).withIgnoreWarning(IGNORE_WARNING).build();
+        caseDataContent = newCaseDataContent().withEvent(event).withData(data).withToken(TOKEN)
+                .withIgnoreWarning(IGNORE_WARNING).build();
         final JurisdictionDefinition jurisdictionDefinition = new JurisdictionDefinition();
         jurisdictionDefinition.setId(JURISDICTION_ID);
         final Version version = new Version();
@@ -139,7 +150,8 @@ class CreateCaseEventDefinitionServiceTest {
         caseTypeDefinition.setJurisdictionDefinition(jurisdictionDefinition);
         caseTypeDefinition.setVersion(version);
         caseEventDefinition = new CaseEventDefinition();
-        caseEventDefinition.setPostState(POST_STATE);
+        caseEventDefinition.setPostStates(getEventPostStates(POST_STATE));
+        caseEventDefinition.setPublish(Boolean.TRUE);
         final SignificantItem significantItem = new SignificantItem();
         significantItem.setUrl("http://www.yahoo.com");
         significantItem.setDescription("description");
@@ -178,6 +190,20 @@ class CreateCaseEventDefinitionServiceTest {
             any(),
             any(),
             any())).willReturn(aboutToSubmitCallbackResponse);
+        doReturn(POST_STATE).when(this.casePostStateService)
+            .evaluateCaseState(any(CaseEventDefinition.class), any(CaseDetails.class));
+    }
+
+    private List<EventPostStateDefinition> getEventPostStates(String... postStateReferences) {
+        List<EventPostStateDefinition> postStates = new ArrayList<>();
+        int i = 0;
+        for (String reference : postStateReferences) {
+            EventPostStateDefinition definition = new EventPostStateDefinition();
+            definition.setPostStateReference(reference);
+            definition.setPriority(++i);
+            postStates.add(definition);
+        }
+        return postStates;
     }
 
     @Test
@@ -197,7 +223,8 @@ class CreateCaseEventDefinitionServiceTest {
         CreateCaseEventResult caseEventResult = createEventService.createCaseEvent(CASE_REFERENCE, caseDataContent);
 
         assertThat(caseEventResult.getSavedCaseDetails().getState()).isEqualTo(POST_STATE);
-        assertThat(caseEventResult.getSavedCaseDetails().getLastStateModifiedDate()).isEqualTo(LocalDateTime.now(clock));
+        assertThat(caseEventResult.getSavedCaseDetails().getLastStateModifiedDate())
+                .isEqualTo(LocalDateTime.now(clock));
     }
 
     @Test
@@ -206,7 +233,8 @@ class CreateCaseEventDefinitionServiceTest {
         caseDetailsBefore.setLastStateModifiedDate(LAST_MODIFIED);
         caseDetailsBefore.setState(PRE_STATE_ID);
         caseEventDefinition = new CaseEventDefinition();
-        caseEventDefinition.setPostState(PRE_STATE_ID);
+        doReturn(PRE_STATE_ID).when(this.casePostStateService)
+            .evaluateCaseState(any(CaseEventDefinition.class), any(CaseDetails.class));
 
         CaseStateDefinition state = new CaseStateDefinition();
         state.setId(PRE_STATE_ID);

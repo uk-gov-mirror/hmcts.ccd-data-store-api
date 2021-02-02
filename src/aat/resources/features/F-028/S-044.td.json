@@ -54,6 +54,9 @@
           "show_condition": null,
           "show_summary_change_option": true,
           "show_summary_content_option": null,
+          "retain_hidden_value": null,
+          "publish": false,
+          "publish_as": null,
           "acls": [
             {
               "role": "[[ANYTHING_PRESENT]]",
@@ -69,8 +72,7 @@
               "update": true,
               "delete": true
             }
-          ],
-          "default_value": null
+          ]
         },
         {
           "id": "NumberField",
@@ -98,6 +100,9 @@
           "show_condition": null,
           "show_summary_change_option": true,
           "show_summary_content_option": null,
+          "retain_hidden_value": null,
+          "publish": false,
+          "publish_as": null,
           "acls": [
             {
               "role": "[[ANYTHING_PRESENT]]",
@@ -113,8 +118,7 @@
               "update": true,
               "delete": true
             }
-          ],
-          "default_value": null
+          ]
         },
         {
           "id": "YesOrNoField",
@@ -142,6 +146,9 @@
           "show_condition": null,
           "show_summary_change_option": true,
           "show_summary_content_option": null,
+          "retain_hidden_value": null,
+          "publish": false,
+          "publish_as": null,
           "acls": [
             {
               "role": "[[ANYTHING_PRESENT]]",
@@ -157,8 +164,7 @@
               "update": true,
               "delete": true
             }
-          ],
-          "default_value": null
+          ]
         },
         {
           "id": "PhoneUKField",
@@ -186,6 +192,9 @@
           "show_condition": null,
           "show_summary_change_option": true,
           "show_summary_content_option": null,
+          "retain_hidden_value": null,
+          "publish": false,
+          "publish_as": null,
           "acls": [
             {
               "role": "[[ANYTHING_PRESENT]]",
@@ -201,8 +210,7 @@
               "update": true,
               "delete": true
             }
-          ],
-          "default_value": null
+          ]
         },
         {
           "id": "EmailField",
@@ -230,6 +238,9 @@
           "show_condition": null,
           "show_summary_change_option": true,
           "show_summary_content_option": null,
+          "retain_hidden_value": null,
+          "publish": false,
+          "publish_as": null,
           "acls": [
             {
               "role": "[[ANYTHING_PRESENT]]",
@@ -245,8 +256,7 @@
               "update": true,
               "delete": true
             }
-          ],
-          "default_value": null
+          ]
         },
         {
           "id": "MoneyGBPField",
@@ -274,6 +284,9 @@
           "show_condition": null,
           "show_summary_change_option": true,
           "show_summary_content_option": null,
+          "retain_hidden_value": null,
+          "publish": false,
+          "publish_as": null,
           "acls": [
             {
               "role": "[[ANYTHING_PRESENT]]",
@@ -289,8 +302,7 @@
               "update": true,
               "delete": true
             }
-          ],
-          "default_value": null
+          ]
         },
         {
           "id": "DateField",
@@ -318,6 +330,9 @@
           "show_condition": null,
           "show_summary_change_option": true,
           "show_summary_content_option": null,
+          "retain_hidden_value": null,
+          "publish": false,
+          "publish_as": null,
           "acls": [
             {
               "role": "[[ANYTHING_PRESENT]]",
@@ -333,8 +348,7 @@
               "update": true,
               "delete": true
             }
-          ],
-          "default_value": null
+          ]
         },
         {
           "id": "DateTimeField",
@@ -362,6 +376,9 @@
           "show_condition": null,
           "show_summary_change_option": true,
           "show_summary_content_option": null,
+          "retain_hidden_value": null,
+          "publish": false,
+          "publish_as": null,
           "acls": [
             {
               "role": "[[ANYTHING_PRESENT]]",
@@ -377,8 +394,7 @@
               "update": true,
               "delete": true
             }
-          ],
-          "default_value": null
+          ]
         },
         {
           "id": "TextAreaField",
@@ -406,6 +422,9 @@
           "show_condition": null,
           "show_summary_change_option": true,
           "show_summary_content_option": null,
+          "retain_hidden_value": null,
+          "publish": false,
+          "publish_as": null,
           "acls": [
             {
               "role": "[[ANYTHING_PRESENT]]",
@@ -421,8 +440,7 @@
               "update": true,
               "delete": true
             }
-          ],
-          "default_value": null
+          ]
         },
         {
           "id": "FixedListField",
@@ -466,6 +484,9 @@
           "show_condition": null,
           "show_summary_change_option": true,
           "show_summary_content_option": null,
+          "retain_hidden_value": null,
+          "publish": false,
+          "publish_as": null,
           "acls": [
             {
               "role": "[[ANYTHING_PRESENT]]",
@@ -481,8 +502,7 @@
               "update": true,
               "delete": true
             }
-          ],
-          "default_value": null
+          ]
         },
         {
           "id": "MultiSelectListField",
@@ -533,12 +553,18 @@
           "validation_expr": null,
           "security_label": "PUBLIC",
           "order": null,
-          "formatted_value": [ "OPTION2", "OPTION4" ],
+          "formatted_value": [
+            "OPTION2",
+            "OPTION4"
+          ],
           "display_context": "OPTIONAL",
           "display_context_parameter": null,
           "show_condition": null,
           "show_summary_change_option": true,
           "show_summary_content_option": null,
+          "retain_hidden_value": null,
+          "publish": false,
+          "publish_as": null,
           "acls": [
             {
               "role": "[[ANYTHING_PRESENT]]",
@@ -554,8 +580,7 @@
               "update": true,
               "delete": true
             }
-          ],
-          "default_value": null
+          ]
         },
         {
           "id": "CollectionField",
@@ -595,18 +620,24 @@
           "validation_expr": null,
           "security_label": "PUBLIC",
           "order": null,
-          "formatted_value": [ {
-            "id" : "CollectionField1",
-            "value" : "Alias 1"
-          }, {
-            "id" : "CollectionField2",
-            "value" : "Alias 2"
-          } ],
+          "formatted_value": [
+            {
+              "id": "CollectionField1",
+              "value": "Alias 1"
+            },
+            {
+              "id": "CollectionField2",
+              "value": "Alias 2"
+            }
+          ],
           "display_context": "OPTIONAL",
           "display_context_parameter": "#COLLECTION(allowDelete,allowInsert)",
           "show_condition": null,
           "show_summary_change_option": false,
           "show_summary_content_option": null,
+          "retain_hidden_value": null,
+          "publish": false,
+          "publish_as": null,
           "acls": [
             {
               "role": "[[ANYTHING_PRESENT]]",
@@ -622,8 +653,7 @@
               "update": true,
               "delete": true
             }
-          ],
-          "default_value": null
+          ]
         },
         {
           "id": "ComplexField",
@@ -686,8 +716,8 @@
                 "complexACLs": [],
                 "display_context": null,
                 "display_context_parameter": null,
-                "formatted_value": null,
-                "default_value": null
+                "retain_hidden_value": null,
+                "formatted_value": null
               },
               {
                 "id": "ComplexFixedListField",
@@ -748,8 +778,8 @@
                 "complexACLs": [],
                 "display_context": null,
                 "display_context_parameter": null,
-                "formatted_value": null,
-                "default_value": null
+                "retain_hidden_value": null,
+                "formatted_value": null
               },
               {
                 "id": "ComplexNestedField",
@@ -808,8 +838,8 @@
                       "complexACLs": [],
                       "display_context": null,
                       "display_context_parameter": null,
-                      "formatted_value": null,
-                      "default_value": null
+                      "retain_hidden_value": null,
+                      "formatted_value": null
                     },
                     {
                       "id": "[[ANYTHING_PRESENT]]",
@@ -861,8 +891,8 @@
                       "complexACLs": [],
                       "display_context": null,
                       "display_context_parameter": "#COLLECTION(allowDelete,allowInsert)",
-                      "formatted_value": null,
-                      "default_value": null
+                      "retain_hidden_value": null,
+                      "formatted_value": null
                     }
                   ],
                   "collection_field_type": null
@@ -892,8 +922,8 @@
                 "complexACLs": [],
                 "display_context": null,
                 "display_context_parameter": null,
-                "formatted_value": null,
-                "default_value": null
+                "retain_hidden_value": null,
+                "formatted_value": null
               }
             ],
             "collection_field_type": null
@@ -910,6 +940,9 @@
           "show_condition": null,
           "show_summary_change_option": false,
           "show_summary_content_option": null,
+          "retain_hidden_value": null,
+          "publish": false,
+          "publish_as": null,
           "acls": [
             {
               "role": "[[ANYTHING_PRESENT]]",
@@ -925,8 +958,7 @@
               "update": true,
               "delete": true
             }
-          ],
-          "default_value": null
+          ]
         },
         {
           "id": "AddressUKField",
@@ -992,8 +1024,8 @@
                 "complexACLs": [],
                 "display_context": null,
                 "display_context_parameter": null,
-                "formatted_value": null,
-                "default_value": null
+                "retain_hidden_value": null,
+                "formatted_value": null
               },
               {
                 "id": "AddressLine2",
@@ -1036,8 +1068,8 @@
                 "complexACLs": [],
                 "display_context": null,
                 "display_context_parameter": null,
-                "formatted_value": null,
-                "default_value": null
+                "retain_hidden_value": null,
+                "formatted_value": null
               },
               {
                 "id": "AddressLine3",
@@ -1080,8 +1112,8 @@
                 "complexACLs": [],
                 "display_context": null,
                 "display_context_parameter": null,
-                "formatted_value": null,
-                "default_value": null
+                "retain_hidden_value": null,
+                "formatted_value": null
               },
               {
                 "id": "PostTown",
@@ -1124,8 +1156,8 @@
                 "complexACLs": [],
                 "display_context": null,
                 "display_context_parameter": null,
-                "formatted_value": null,
-                "default_value": null
+                "retain_hidden_value": null,
+                "formatted_value": null
               },
               {
                 "id": "County",
@@ -1168,8 +1200,8 @@
                 "complexACLs": [],
                 "display_context": null,
                 "display_context_parameter": null,
-                "formatted_value": null,
-                "default_value": null
+                "retain_hidden_value": null,
+                "formatted_value": null
               },
               {
                 "id": "PostCode",
@@ -1212,8 +1244,8 @@
                 "complexACLs": [],
                 "display_context": null,
                 "display_context_parameter": null,
-                "formatted_value": null,
-                "default_value": null
+                "retain_hidden_value": null,
+                "formatted_value": null
               },
               {
                 "id": "Country",
@@ -1256,8 +1288,8 @@
                 "complexACLs": [],
                 "display_context": null,
                 "display_context_parameter": null,
-                "formatted_value": null,
-                "default_value": null
+                "retain_hidden_value": null,
+                "formatted_value": null
               }
             ],
             "collection_field_type": null
@@ -1279,6 +1311,9 @@
           "show_condition": null,
           "show_summary_change_option": false,
           "show_summary_content_option": null,
+          "retain_hidden_value": null,
+          "publish": false,
+          "publish_as": null,
           "acls": [
             {
               "role": "[[ANYTHING_PRESENT]]",
@@ -1294,8 +1329,7 @@
               "update": true,
               "delete": true
             }
-          ],
-          "default_value": null
+          ]
         },
         {
           "id": "DocumentField",
@@ -1323,6 +1357,9 @@
           "show_condition": null,
           "show_summary_change_option": true,
           "show_summary_content_option": null,
+          "retain_hidden_value": null,
+          "publish": false,
+          "publish_as": null,
           "acls": [
             {
               "role": "[[ANYTHING_PRESENT]]",
@@ -1338,8 +1375,7 @@
               "update": true,
               "delete": true
             }
-          ],
-          "default_value": null
+          ]
         }
       ],
       "event_token": "[[ANYTHING_PRESENT]]",
@@ -1349,6 +1385,10 @@
           "label": "First page",
           "order": 1,
           "wizard_page_fields": [
+            {
+              "__ordering__": "unordered",
+              "__elementId__": "case_field_id"
+            },
             {
               "case_field_id": "TextField",
               "order": 1,
@@ -1389,6 +1429,10 @@
           "label": "Second page",
           "order": 2,
           "wizard_page_fields": [
+            {
+              "__ordering__": "unordered",
+              "__elementId__": "case_field_id"
+            },
             {
               "case_field_id": "MoneyGBPField",
               "order": 1,
@@ -1435,6 +1479,10 @@
           "label": "Third page",
           "order": 3,
           "wizard_page_fields": [
+            {
+              "__ordering__": "unordered",
+              "__elementId__": "case_field_id"
+            },
             {
               "case_field_id": "CollectionField",
               "order": 2,

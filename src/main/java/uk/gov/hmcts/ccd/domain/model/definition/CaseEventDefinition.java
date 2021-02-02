@@ -21,8 +21,8 @@ public class CaseEventDefinition implements Serializable {
     private List<CaseEventFieldDefinition> caseFields = new ArrayList<>();
     @JsonProperty("pre_states")
     private List<String> preStates = new ArrayList<>();
-    @JsonProperty("post_state")
-    private String postState = null;
+    @JsonProperty("post_states")
+    private List<EventPostStateDefinition> postStates = new ArrayList<>();
     @JsonProperty("callback_url_about_to_start_event")
     private String callBackURLAboutToStartEvent;
     @JsonProperty("retries_timeout_about_to_start_event")
@@ -45,6 +45,8 @@ public class CaseEventDefinition implements Serializable {
     private String endButtonLabel = null;
     @JsonProperty("can_save_draft")
     private Boolean canSaveDraft = null;
+    @JsonProperty("publish")
+    private Boolean publish;
     @JsonProperty("acls")
     private List<AccessControlList> accessControlLists;
 
@@ -96,12 +98,12 @@ public class CaseEventDefinition implements Serializable {
         this.preStates = preStates;
     }
 
-    public String getPostState() {
-        return postState;
+    public List<EventPostStateDefinition> getPostStates() {
+        return postStates;
     }
 
-    public void setPostState(String postState) {
-        this.postState = postState;
+    public void setPostStates(List<EventPostStateDefinition> postStates) {
+        this.postStates = postStates;
     }
 
     public String getCallBackURLAboutToStartEvent() {
@@ -199,6 +201,14 @@ public class CaseEventDefinition implements Serializable {
 
     public void setCanSaveDraft(Boolean canSaveDraft) {
         this.canSaveDraft = canSaveDraft;
+    }
+
+    public Boolean getPublish() {
+        return publish;
+    }
+
+    public void setPublish(Boolean publish) {
+        this.publish = publish;
     }
 
     public Optional<CaseEventFieldDefinition> getCaseEventField(String caseFieldId) {

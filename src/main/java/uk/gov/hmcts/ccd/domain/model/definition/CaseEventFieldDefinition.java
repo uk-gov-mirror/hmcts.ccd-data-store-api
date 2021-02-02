@@ -1,15 +1,15 @@
 package uk.gov.hmcts.ccd.domain.model.definition;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
-
-import java.io.Serializable;
-import java.util.ArrayList;
-import java.util.List;
-
 import io.swagger.annotations.ApiModel;
 import io.swagger.annotations.ApiModelProperty;
 import lombok.ToString;
 import uk.gov.hmcts.ccd.domain.model.common.CommonDCPModel;
+
+import java.io.Serializable;
+import java.util.ArrayList;
+import java.util.List;
 
 @ToString
 @ApiModel(description = "")
@@ -23,7 +23,9 @@ public class CaseEventFieldDefinition implements Serializable, CommonDCPModel {
     private Integer showSummaryContentOption = null;
     private String label = null;
     private String hintText = null;
-    private String defaultValue;
+    private Boolean retainHiddenValue;
+    private Boolean publish;
+    private String publishAs;
     private List<CaseEventFieldComplexDefinition> caseEventFieldComplexDefinitions = new ArrayList<>();
 
     @ApiModelProperty(required = true, value = "Foreign key to CaseField.id")
@@ -40,6 +42,11 @@ public class CaseEventFieldDefinition implements Serializable, CommonDCPModel {
     @JsonProperty("display_context")
     public String getDisplayContext() {
         return displayContext;
+    }
+
+    @JsonIgnore
+    public DisplayContext getDisplayContextEnum() {
+        return DisplayContext.valueOf(displayContext);
     }
 
     public void setDisplayContext(String displayContext) {
@@ -122,14 +129,36 @@ public class CaseEventFieldDefinition implements Serializable, CommonDCPModel {
         this.caseEventFieldComplexDefinitions = eventComplexTypeEntities;
     }
 
-    @ApiModelProperty(value = "Default value coming from the Event that overwrites complex fields.")
-    @JsonProperty("defaultValue")
-    public String getDefaultValue() {
-        return defaultValue;
+    @ApiModelProperty(value = "whether this field is data should be retained, dependant on show_condition being"
+            + " populated")
+    @JsonProperty("retain_hidden_value")
+    public Boolean getRetainHiddenValue() {
+        return retainHiddenValue;
     }
 
-    public void setDefaultValue(String defaultValue) {
-        this.defaultValue = defaultValue;
+    public void setRetainHiddenValue(Boolean retainHiddenValue) {
+        this.retainHiddenValue = retainHiddenValue;
+    }
+
+    @ApiModelProperty(value = "whether this field is data should be published")
+    @JsonProperty("publish")
+    public Boolean getPublish() {
+        return publish;
+    }
+
+    public void setPublish(Boolean publish) {
+        this.publish = publish;
+    }
+
+
+    @ApiModelProperty(value = "Alias for field id if published is set to true")
+    @JsonProperty("publish_as")
+    public String getPublishAs() {
+        return publishAs;
+    }
+
+    public void setPublishAs(String publishAs) {
+        this.publishAs = publishAs;
     }
 
 }
